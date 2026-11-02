@@ -1,0 +1,9 @@
+{
+  "name": "@ai-qa/postman-adapter",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "echo Postman adapter ready"
+  }
+}

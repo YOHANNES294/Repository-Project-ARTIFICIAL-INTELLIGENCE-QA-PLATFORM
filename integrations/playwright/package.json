@@ -1,0 +1,9 @@
+{
+  "name": "@ai-qa/playwright-reporter",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "echo Playwright reporter ready"
+  }
+}

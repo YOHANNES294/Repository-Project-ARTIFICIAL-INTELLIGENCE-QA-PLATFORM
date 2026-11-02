@@ -1,0 +1,10 @@
+{
+  "extends": "@ai-qa/config/tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "lib": ["ES2022", "DOM"],
+    "composite": true
+  },
+  "include": ["src/**/*"]
+}

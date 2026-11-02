@@ -1,0 +1,31 @@
+{
+  "name": "ai-qa-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-Powered Quality Assurance Management Platform",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @ai-qa/api --filter @ai-qa/worker --filter @ai-qa/web dev",
+    "dev:api": "pnpm --filter @ai-qa/api dev",
+    "dev:web": "pnpm --filter @ai-qa/web dev",
+    "dev:worker": "pnpm --filter @ai-qa/worker dev",
+    "build": "pnpm --filter @ai-qa/config build && pnpm --filter @ai-qa/shared-types build && pnpm --filter @ai-qa/validation build && pnpm --filter @ai-qa/api-client build && pnpm --filter @ai-qa/ui build && pnpm --filter @ai-qa/api build && pnpm --filter @ai-qa/worker build && pnpm --filter @ai-qa/web build",
+    "typecheck": "tsc -b packages/shared-types packages/validation packages/api-client packages/ui apps/api apps/worker && pnpm --filter @ai-qa/web exec tsc --noEmit",
+    "lint": "pnpm -r exec eslint . --max-warnings 0",
+    "test": "pnpm -r test",
+    "test:unit": "vitest run",
+    "db:generate": "prisma generate --schema=database/prisma/schema.prisma",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down"
+  },
+  "devDependencies": {
+    "@prisma/client": "6.19.3",
+    "prisma": "6.19.3",
+    "typescript": "^5.7.3",
+    "prettier": "^3.5.3",
+    "rimraf": "^6.0.1"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

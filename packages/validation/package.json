@@ -1,0 +1,21 @@
+{
+  "name": "@ai-qa/validation",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@ai-qa/config": "workspace:*",
+    "@ai-qa/shared-types": "workspace:*",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.6"
+  }
+}
