@@ -36,11 +36,14 @@ Status Legend:
 ---
 
 ## Milestone 03 — Project Management
-- [ ] Project, ProjectMember, Environment domain models & CRUD operations
-- [ ] Project keys generation & uniqueness per organization
-- [ ] Environment management (Development, Staging, Production, QA)
-- [ ] Project activity history & audit logs
-- [ ] Frontend project management screens with real API integration
+- [x] Project, ProjectMember, Environment domain models & CRUD operations
+- [x] Project keys generation & uniqueness per organization (uppercase, alphanumeric, 2-10 chars)
+- [x] Environment management (Development, Staging, Production, QA, Custom with secret masking)
+- [x] Project-specific roles (PROJECT_LEAD, MEMBER, VIEWER) & cross-org membership prevention
+- [x] Project archiving, restoration, and deletion safeguards
+- [x] Project activity history & audit logs
+- [x] Frontend project management screens with real API integration (Overview, Details, Environments, Members, Settings)
+- [x] Automated tests for project lifecycle, environments, members, and tenant isolation (100% passing)
 
 ---
 

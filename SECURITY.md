@@ -13,17 +13,24 @@
   - `SameSite: Strict` in production (prevents CSRF).
   - `Secure: true` in production (HTTPS enforcement).
 
-## 2. Multi-Tenancy & Access Control
+## 2. Multi-Tenancy & Project Isolation
 - **Strict Tenant Isolation**:
   - Organization IDs from client headers (`x-organization-id`) are **never trusted without verification**.
   - `requireTenant` middleware checks the database to verify the authenticated user is an active member of the requested organization before granting access. Cross-tenant access attempts immediately fail with `403 Forbidden`.
+  - Projects can only be accessed by verified members of the parent organization. Cross-organization project lookups return `404 Not Found` (preventing ID enumeration).
+- **Cross-Organization Membership Guard**:
+  - Adding a member to a project requires that the target user is already an active member of that specific organization. Adding users from other organizations is denied with `403 Forbidden`.
 - **Role-Based Access Control (RBAC)**:
-  - Supported roles: `OWNER`, `ADMINISTRATOR`, `QA_MANAGER`, `QA_ENGINEER`, `AUTOMATION_ENGINEER`, `DEVELOPER`, `VIEWER`.
-  - Organization `OWNER` retains full control and cannot be removed or demoted if they are the sole owner.
-  - Sensitive operations (invitations, role modifications, member removals) strictly require `OWNER` or `ADMINISTRATOR` privileges.
+  - Organization roles: `OWNER`, `ADMINISTRATOR`, `QA_MANAGER`, `QA_ENGINEER`, `AUTOMATION_ENGINEER`, `DEVELOPER`, `VIEWER`.
+  - Project roles: `PROJECT_LEAD`, `MEMBER`, `VIEWER`.
+  - Project creation, modification, environment management, and member assignment require `QA_MANAGER`, `ADMINISTRATOR`, or `OWNER` privileges.
+  - Project deletion requires `ADMINISTRATOR` or `OWNER` privileges and enforces prior archival as a safety guardrail.
 
-## 3. Defense-in-Depth Protections
-- **Rate Limiting**: `express-rate-limit` enforces strict limits on authentication endpoints (30 requests / 15 minutes) to protect against credential stuffing and password guessing.
+## 3. Environment Secret Protection
+- Environment configuration dictionaries (`variables`) are sanitized by the backend service. Any sensitive key containing substrings such as `secret`, `key`, `pass`, `token`, or `auth` is masked (`••••••••`) before API delivery, preventing credential leakage in responses or browser state.
+
+## 4. Defense-in-Depth Protections
+- **Rate Limiting**: `express-rate-limit` enforces strict limits on authentication endpoints (30 requests / 15 minutes) to protect against brute force and credential stuffing.
 - **Timing-Attack Protection**: Password reset requests do not disclose whether an email address exists in the system.
-- **Audit Logging**: All authentication and organization-level actions generate non-repudiable audit logs (`AuditLog`).
-- **HTTP Security Headers**: Powered by `helmet`, including Content-Security-Policy, X-Content-Type-Options, Frameguard, and X-XSS-Protection.
+- **Audit Logging**: All authentication, organization, project, member, and environment operations create structured entries in `AuditLog`.
+- **HTTP Security Headers**: Powered by `helmet`, including CSP, HSTS, frame protection, and content type sniffing prevention.

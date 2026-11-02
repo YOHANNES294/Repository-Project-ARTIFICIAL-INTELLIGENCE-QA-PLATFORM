@@ -9,6 +9,21 @@ export enum OrganizationRole {
   VIEWER = 'VIEWER',
 }
 
+// Project Status
+export enum ProjectStatus {
+  ACTIVE = 'ACTIVE',
+  ON_HOLD = 'ON_HOLD',
+  COMPLETED = 'COMPLETED',
+  ARCHIVED = 'ARCHIVED',
+}
+
+// Project Role
+export enum ProjectRole {
+  PROJECT_LEAD = 'PROJECT_LEAD',
+  MEMBER = 'MEMBER',
+  VIEWER = 'VIEWER',
+}
+
 // Milestone Status
 export enum MilestoneStatus {
   PLANNED = 'PLANNED',
@@ -126,4 +141,54 @@ export interface HealthCheckResponse {
     redis: 'connected' | 'disconnected' | 'unknown';
     worker: 'running' | 'idle' | 'stopped';
   };
+}
+
+export interface ProjectDto {
+  id: string;
+  organizationId: string;
+  name: string;
+  key: string;
+  description: string | null;
+  objectives: string | null;
+  status: ProjectStatus;
+  isArchived: boolean;
+  archivedAt: string | null;
+  settings: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+  _count?: {
+    members?: number;
+    environments?: number;
+    testCases?: number;
+    testRuns?: number;
+    defects?: number;
+  };
+}
+
+export interface ProjectMemberDto {
+  id: string;
+  projectId: string;
+  userId: string;
+  role: ProjectRole;
+  createdAt: string;
+  user: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    avatarUrl: string | null;
+  };
+}
+
+export interface EnvironmentDto {
+  id: string;
+  projectId: string;
+  name: string;
+  type: string;
+  url: string | null;
+  description: string | null;
+  variables?: Record<string, unknown> | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }

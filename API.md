@@ -12,7 +12,7 @@ Success:
 {
   "success": true,
   "data": { ... },
-  "meta": { "page": 1, "limit": 20, "total": 100 }
+  "meta": { "page": 1, "limit": 20, "total": 100, "totalPages": 5 }
 }
 ```
 Error:
@@ -37,181 +37,126 @@ Error:
 ---
 
 ## 3. Authentication Endpoints (`/api/v1/auth`)
-
-### `POST /api/v1/auth/register`
-Creates a user account, default organization, ownership membership (`OWNER`), Free tier subscription, issues session tokens, and sets HTTP-only cookies.
-- **Rate Limit**: 30 req / 15 min.
-- **Request Body**:
-```json
-{
-  "email": "user@example.com",
-  "password": "SecurePassword123!",
-  "firstName": "Jane",
-  "lastName": "Doe",
-  "organizationName": "Acme QA Corp"
-}
-```
-- **Response (201 Created)**:
-```json
-{
-  "success": true,
-  "data": {
-    "user": {
-      "id": "uuid",
-      "email": "user@example.com",
-      "firstName": "Jane",
-      "lastName": "Doe",
-      "isEmailVerified": false
-    },
-    "organization": {
-      "id": "uuid",
-      "name": "Acme QA Corp",
-      "slug": "acme-qa-corp-abc"
-    },
-    "accessToken": "jwt-token"
-  }
-}
-```
-
-### `POST /api/v1/auth/login`
-Authenticates credentials with Argon2id, creates a new refresh token family, and sets HTTP-only session cookies.
-- **Rate Limit**: 30 req / 15 min.
-- **Request Body**:
-```json
-{
-  "email": "user@example.com",
-  "password": "SecurePassword123!"
-}
-```
-- **Response (200 OK)**:
-```json
-{
-  "success": true,
-  "data": {
-    "user": { ... },
-    "organization": { ... },
-    "role": "OWNER",
-    "accessToken": "jwt-token"
-  }
-}
-```
-
-### `POST /api/v1/auth/refresh`
-Performs refresh token rotation. Issues a new access token and rotated refresh token in the same token family. If an already-revoked refresh token is presented, detects token reuse and invalidates all active sessions in the family.
-- **Cookies**: `refreshToken` (HTTP-only)
-- **Response (200 OK)**:
-```json
-{
-  "success": true,
-  "data": {
-    "accessToken": "new-jwt-token",
-    "organizationId": "uuid"
-  }
-}
-```
-
-### `POST /api/v1/auth/logout`
-Revokes current refresh token session in database, clears session cookies, and records audit trail.
-- **Response (200 OK)**:
-```json
-{
-  "success": true,
-  "data": { "message": "Logged out successfully" }
-}
-```
-
-### `POST /api/v1/auth/forgot-password`
-Initiates password reset. Timing-safe enumeration defense (always returns success).
-- **Request Body**:
-```json
-{ "email": "user@example.com" }
-```
-- **Response (200 OK)**
-
-### `POST /api/v1/auth/reset-password`
-Resets password with valid verification token, hashes new password with Argon2id, and invalidates all existing sessions.
-- **Request Body**:
-```json
-{
-  "token": "reset-token",
-  "newPassword": "NewPassword123!"
-}
-```
-- **Response (200 OK)**
-
-### `POST /api/v1/auth/verify-email`
-Verifies user email with token.
-- **Request Body**:
-```json
-{ "token": "verify-token" }
-```
-- **Response (200 OK)**
-
-### `GET /api/v1/auth/me`
-Retrieves authenticated user profile and active organization context.
-- **Headers**: `Authorization: Bearer <token>` or `accessToken` cookie.
-- **Response (200 OK)**
+- `POST /api/v1/auth/register`: Create user, default organization, ownership (`OWNER`), set HTTP-only cookies.
+- `POST /api/v1/auth/login`: Authenticate with Argon2id, create refresh family, set cookies.
+- `POST /api/v1/auth/refresh`: Rotate refresh token with reuse breach detection.
+- `POST /api/v1/auth/logout`: Revoke active session and clear cookies.
+- `POST /api/v1/auth/forgot-password`: Timing-safe password reset token generation.
+- `POST /api/v1/auth/reset-password`: Reset password with verification token & invalidate sessions.
+- `POST /api/v1/auth/verify-email`: Verify user email with token.
+- `GET /api/v1/auth/me`: Authenticated user profile and active tenant.
 
 ---
 
 ## 4. Organization Endpoints (`/api/v1/organizations`)
+- `POST /api/v1/organizations`: Create additional organization (caller assigned `OWNER`).
+- `GET /api/v1/organizations`: List user's organizations and roles.
+- `POST /api/v1/organizations/switch`: Switch active organization context.
+- `GET /api/v1/organizations/:orgId/members`: List organization members.
+- `POST /api/v1/organizations/:orgId/invitations`: Invite new member (`OWNER` or `ADMINISTRATOR`).
+- `POST /api/v1/organizations/invitations/accept`: Accept invitation.
+- `PATCH /api/v1/organizations/:orgId/members/:memberId`: Update member role.
+- `DELETE /api/v1/organizations/:orgId/members/:memberId`: Remove member.
 
-### `POST /api/v1/organizations`
-Creates a new organization with the caller as `OWNER`.
-- **Headers**: `Authorization: Bearer <token>`
-- **Request Body**:
+---
+
+## 5. Project Management Endpoints (`/api/v1/projects`)
+
+### `GET /api/v1/projects`
+List projects for the active tenant organization with search, filtering, and pagination.
+- **Query Parameters**:
+  - `search`: Filter by name, key, or description substring.
+  - `status`: `ACTIVE` | `ON_HOLD` | `COMPLETED` | `ARCHIVED`.
+  - `isArchived`: `true` | `false`.
+  - `page`: Page number (default: 1).
+  - `limit`: Page size (default: 20, max: 100).
+  - `sortBy`: `name` | `key` | `createdAt` | `updatedAt`.
+  - `sortOrder`: `asc` | `desc`.
+- **Response (200 OK)**:
 ```json
-{ "name": "New Organization" }
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "organizationId": "uuid",
+      "name": "Core Banking Platform",
+      "key": "CORE",
+      "description": "Main transaction processing system",
+      "objectives": "Zero regression bugs",
+      "status": "ACTIVE",
+      "isArchived": false,
+      "_count": { "members": 3, "environments": 3, "testCases": 45, "testRuns": 8, "defects": 2 }
+    }
+  ],
+  "meta": { "page": 1, "limit": 20, "total": 1, "totalPages": 1 }
+}
 ```
-- **Response (201 Created)**
 
-### `GET /api/v1/organizations`
-Lists all organizations the caller belongs to along with their role in each.
-- **Response (200 OK)**
-
-### `POST /api/v1/organizations/switch`
-Switches active organization context and returns an updated access token.
-- **Request Body**:
-```json
-{ "organizationId": "uuid" }
-```
-- **Response (200 OK)**
-
-### `GET /api/v1/organizations/:orgId/members`
-Lists all members in the organization.
-- **Security**: Requires membership in `orgId` (Strict Tenant Isolation).
-- **Response (200 OK)**
-
-### `POST /api/v1/organizations/:orgId/invitations`
-Invites a new member by email with specified role.
-- **Security**: Requires `OWNER` or `ADMINISTRATOR` role in `orgId`.
+### `POST /api/v1/projects`
+Create a new project. Auto-initializes default environments (`Development`, `Staging`, `Production`) and assigns caller as `PROJECT_LEAD`.
+- **Security**: Requires `QA_MANAGER`, `ADMINISTRATOR`, or `OWNER`.
 - **Request Body**:
 ```json
 {
-  "email": "colleague@example.com",
-  "role": "QA_ENGINEER"
+  "name": "Core Banking Platform",
+  "key": "CORE",
+  "description": "Main platform",
+  "objectives": "99.9% pass rate on core flows"
 }
 ```
 - **Response (201 Created)**
 
-### `POST /api/v1/organizations/invitations/accept`
-Accepts an invitation and adds caller to the organization.
+### `GET /api/v1/projects/:projectId`
+Get project details, environments, and aggregate counts.
+- **Security**: Verified member of the project's parent organization (Strict Tenant Isolation).
+- **Response (200 OK)**
+
+### `PATCH /api/v1/projects/:projectId`
+Update project details, objectives, or status (`ACTIVE`, `ON_HOLD`, `COMPLETED`, `ARCHIVED`).
+- **Security**: Requires `QA_MANAGER`, `ADMINISTRATOR`, or `OWNER`.
 - **Request Body**:
 ```json
-{ "token": "invitation-token" }
+{
+  "name": "Updated Name",
+  "status": "ON_HOLD",
+  "objectives": "Updated targets"
+}
 ```
 - **Response (200 OK)**
 
-### `PATCH /api/v1/organizations/:orgId/members/:memberId`
-Updates a member's role. Prevents demoting the sole organization Owner.
-- **Security**: Requires `OWNER` or `ADMINISTRATOR`.
-- **Request Body**:
-```json
-{ "role": "QA_MANAGER" }
-```
+### `POST /api/v1/projects/:projectId/archive`
+Archives the project (`isArchived: true`, `status: ARCHIVED`).
+- **Security**: Requires `QA_MANAGER`, `ADMINISTRATOR`, or `OWNER`.
 - **Response (200 OK)**
 
-### `DELETE /api/v1/organizations/:orgId/members/:memberId`
-Removes a member from the organization. Prevents removing the sole organization Owner.
-- **Security**: Requires `OWNER` or `ADMINISTRATOR`.
+### `POST /api/v1/projects/:projectId/restore`
+Restores an archived project (`isArchived: false`, `status: ACTIVE`).
+- **Security**: Requires `QA_MANAGER`, `ADMINISTRATOR`, or `OWNER`.
 - **Response (200 OK)**
+
+### `DELETE /api/v1/projects/:projectId`
+Permanently deletes a project. Safeguard: project must be archived first.
+- **Security**: Requires `ADMINISTRATOR` or `OWNER`.
+- **Response (200 OK)**
+
+### `GET /api/v1/projects/:projectId/activity`
+Retrieves chronological audit log entries for project modifications.
+- **Response (200 OK)**
+
+---
+
+## 6. Project Members Endpoints (`/api/v1/projects/:projectId/members`)
+- `GET /api/v1/projects/:projectId/members`: Lists project team members with user details and project roles.
+- `POST /api/v1/projects/:projectId/members`: Adds an existing organization member to the project. Cross-organization member addition is strictly denied with `403 Forbidden`.
+  - Roles: `PROJECT_LEAD`, `MEMBER`, `VIEWER`.
+- `PATCH /api/v1/projects/:projectId/members/:memberId`: Updates project member role.
+- `DELETE /api/v1/projects/:projectId/members/:memberId`: Removes member from the project.
+
+---
+
+## 7. Project Environments Endpoints (`/api/v1/projects/:projectId/environments`)
+- `GET /api/v1/projects/:projectId/environments`: Lists project deployment targets. Redacts sensitive configuration variables (`••••••••`).
+- `POST /api/v1/projects/:projectId/environments`: Creates a new environment (`DEVELOPMENT`, `TESTING`, `STAGING`, `PRODUCTION`, `CUSTOM`).
+- `PATCH /api/v1/projects/:projectId/environments/:envId`: Updates environment URL, description, variables, or active status.
+- `DELETE /api/v1/projects/:projectId/environments/:envId`: Deletes environment.

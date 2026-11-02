@@ -81,6 +81,44 @@ export const createProjectSchema = z.object({
     .max(10, 'Key must be at most 10 characters')
     .regex(/^[A-Z0-9]+$/, 'Project key must consist of uppercase letters and digits only'),
   description: z.string().max(1000).optional(),
+  objectives: z.string().max(2000).optional(),
+  status: z.enum(['ACTIVE', 'ON_HOLD', 'COMPLETED', 'ARCHIVED']).default('ACTIVE'),
+  settings: z.record(z.unknown()).optional(),
+});
+
+export const updateProjectSchema = z.object({
+  name: z.string().min(2, 'Project name must be at least 2 characters').max(100).trim().optional(),
+  description: z.string().max(1000).optional().nullable(),
+  objectives: z.string().max(2000).optional().nullable(),
+  status: z.enum(['ACTIVE', 'ON_HOLD', 'COMPLETED', 'ARCHIVED']).optional(),
+  settings: z.record(z.unknown()).optional(),
+});
+
+export const addProjectMemberSchema = z.object({
+  userId: z.string().uuid('Invalid user ID format'),
+  role: z.enum(['PROJECT_LEAD', 'MEMBER', 'VIEWER']).default('MEMBER'),
+});
+
+export const updateProjectMemberRoleSchema = z.object({
+  role: z.enum(['PROJECT_LEAD', 'MEMBER', 'VIEWER']),
+});
+
+export const createEnvironmentSchema = z.object({
+  name: z.string().min(1, 'Environment name is required').max(50).trim(),
+  type: z.enum(['DEVELOPMENT', 'TESTING', 'STAGING', 'PRODUCTION', 'CUSTOM']).default('CUSTOM'),
+  url: z.string().url('Invalid URL format').max(500).optional().nullable().or(z.literal('')),
+  description: z.string().max(1000).optional().nullable(),
+  variables: z.record(z.unknown()).optional(),
+  isActive: z.boolean().default(true),
+});
+
+export const updateEnvironmentSchema = z.object({
+  name: z.string().min(1, 'Environment name is required').max(50).trim().optional(),
+  type: z.enum(['DEVELOPMENT', 'TESTING', 'STAGING', 'PRODUCTION', 'CUSTOM']).optional(),
+  url: z.string().url('Invalid URL format').max(500).optional().nullable().or(z.literal('')),
+  description: z.string().max(1000).optional().nullable(),
+  variables: z.record(z.unknown()).optional(),
+  isActive: z.boolean().optional(),
 });
 
 export const createTestCaseSchema = z.object({
@@ -125,4 +163,9 @@ export type InviteMemberInput = z.infer<typeof inviteMemberSchema>;
 export type AcceptInvitationInput = z.infer<typeof acceptInvitationSchema>;
 export type UpdateMemberRoleInput = z.infer<typeof updateMemberRoleSchema>;
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
+export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
+export type AddProjectMemberInput = z.infer<typeof addProjectMemberSchema>;
+export type UpdateProjectMemberRoleInput = z.infer<typeof updateProjectMemberRoleSchema>;
+export type CreateEnvironmentInput = z.infer<typeof createEnvironmentSchema>;
+export type UpdateEnvironmentInput = z.infer<typeof updateEnvironmentSchema>;
 export type CreateTestCaseInput = z.infer<typeof createTestCaseSchema>;
