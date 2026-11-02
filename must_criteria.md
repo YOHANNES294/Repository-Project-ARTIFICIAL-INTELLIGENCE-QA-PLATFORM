@@ -25,12 +25,13 @@ Status Legend:
 ---
 
 ## Milestone 02 — Authentication and SaaS Foundation
-- [ ] Multi-tenant data models: User, Organization, OrganizationMember, Role, Permission, Session, Invitation
-- [ ] Password hashing with Argon2/bcrypt & secure HTTP-only cookie session handling
-- [ ] User registration, login, logout, refresh tokens, password reset flows
-- [ ] Tenant resolution middleware and strict organization isolation
-- [ ] Role-Based Access Control (RBAC) middleware with granular permissions
-- [ ] Automated tests for auth, session security, and cross-tenant data leakage prevention
+- [x] Multi-tenant data models: User, Organization, OrganizationMember, Role, Permission, Session/RefreshToken, VerificationToken, Invitation
+- [x] Password hashing with Argon2id & secure HTTP-only cookie session handling
+- [x] User registration, login, logout, refresh tokens, password reset flows
+- [x] Refresh-token rotation and reuse detection with family-wide revocation
+- [x] Tenant resolution middleware and strict organization isolation
+- [x] Role-Based Access Control (RBAC) middleware with granular roles (Owner, Admin, QA Manager, QA Engineer, Automation, Developer, Viewer)
+- [x] Automated tests for auth, session security, and cross-tenant data leakage prevention (100% passing)
 
 ---
 

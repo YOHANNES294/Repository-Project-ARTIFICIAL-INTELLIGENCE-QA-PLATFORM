@@ -76,7 +76,7 @@ export function errorHandler(
     return;
   }
 
-  if (err instanceof ZodError) {
+  if (err instanceof ZodError || err.name === 'ZodError' || ('issues' in err && Array.isArray((err as any).issues))) {
     logger.warn(`Validation error: ${err.message}`, {
       requestId,
       path: req.originalUrl,
@@ -88,7 +88,7 @@ export function errorHandler(
       error: {
         code: 'VALIDATION_ERROR',
         message: 'Invalid request data',
-        details: err.errors,
+        details: (err as any).issues || (err as any).errors,
       },
     });
     return;

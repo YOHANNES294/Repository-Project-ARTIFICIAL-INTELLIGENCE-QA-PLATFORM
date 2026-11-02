@@ -6,6 +6,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { logger } from './logger.js';
 import { errorHandler, NotFoundError } from './errors.js';
 import { healthRouter } from './routes/health.js';
+import { authRouter } from './routes/auth.routes.js';
+import { organizationRouter } from './routes/org.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -46,6 +48,8 @@ export function createApp(): Express {
 
   // Base API routes
   app.use('/api/v1', healthRouter);
+  app.use('/api/v1/auth', authRouter);
+  app.use('/api/v1/organizations', organizationRouter);
 
   // Fallback 404 handler
   app.use((req: Request) => {
