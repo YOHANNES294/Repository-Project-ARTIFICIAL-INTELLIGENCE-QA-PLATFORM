@@ -9,7 +9,8 @@ import {
   updateEnvironmentSchema,
 } from '@ai-qa/validation';
 import { authenticate, requireTenant, requireRole } from '../middleware/auth.js';
-import { OrganizationRole, ProjectStatus, ProjectRole, ApiResponse } from '@ai-qa/shared-types';
+import { requireEntitlement } from '../middleware/entitlement.js';
+import { OrganizationRole, ProjectStatus, ProjectRole, ApiResponse, UsageMetric } from '@ai-qa/shared-types';
 import { milestoneRouter } from './milestone.routes.js';
 import { testSuiteRouter } from './test-suite.routes.js';
 import { tagRouter } from './tag.routes.js';
@@ -60,6 +61,7 @@ projectRouter.get('/', async (req: Request, res: Response, next: NextFunction) =
 projectRouter.post(
   '/',
   requireRole(OrganizationRole.QA_MANAGER, OrganizationRole.ADMINISTRATOR),
+  requireEntitlement(UsageMetric.PROJECTS, 1),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const validated = createProjectSchema.parse(req.body);

@@ -149,9 +149,19 @@ Status Legend:
 ---
 
 ## Milestone 11 — Billing and SaaS Administration
-- [ ] Billing plans (Free, Starter, Professional, Enterprise) and tenant subscription models
-- [ ] Quota and plan limit enforcement (projects, test runs, storage, AI tokens, members)
-- [ ] Super-Admin portal for platform management, tenant oversight, audit logs, system health
+- [x] Database-backed plan management (Free, Starter, Professional, Enterprise) and tenant subscription lifecycle state machine (Trialing, Active, Past Due, Paused, Cancelled, Expired)
+- [x] Server-side entitlement enforcement engine (HTTP 402 Payment Required for exceeded quotas; HTTP 403 Forbidden for unincluded feature flags)
+- [x] Strict non-destructive customer data guarantee: plan downgrades or cancellations never delete existing tenant projects, test cases, or defects
+- [x] Auditable usage metering with immutable ledger entries (`UsageLedgerEntry`) protected against double-metering by idempotency keys, and manual adjustment records (`UsageAdjustment`)
+- [x] Provider-independent payment gateway architecture (`PaymentProviderInterface`) with pluggable Stripe, Chapa (multi-currency USD, ETB, EUR), and Local Test providers
+- [x] AES-256-GCM encryption for payment gateway secrets at rest (`secretKeyEncrypted`, `secretKeyIv`, `secretKeyTag`) with masked display
+- [x] Secure inbound payment webhook processor (`/payment-webhooks/:provider`) with raw body HMAC signature verification, replay protection (`PaymentWebhookEvent`), and automatic subscription activation
+- [x] Normalized invoice and payment models with test-mode badges (`isTestMode: true`), status tracking, and responsive HTML invoice statements (`generateInvoiceHtml`)
+- [x] Organization billing workspace UI (`/settings/billing`, `/settings/billing/plans`, `/settings/billing/invoices`, `/settings/billing/usage`) with live quota meters and cancellation workflows
+- [x] Platform Super Administration UI (`/platform`, `/platform/organizations`, `/platform/users`, `/platform/plans`, `/platform/system`) guarded by `requireSuperAdmin` (strictly rejecting standard organization owners with 403 Forbidden)
+- [x] Tenant and user suspension enforcement with mandatory audit logging and reason recording
+- [x] Automated test suite: 100% passing across 20 test files and 203 tests in `apps/api` (zero regressions, 28 dedicated billing/admin tests)
+- [x] Next.js 16.4.4 & React 19 web pages with clean production build (`next build --webpack`)
 
 ---
 

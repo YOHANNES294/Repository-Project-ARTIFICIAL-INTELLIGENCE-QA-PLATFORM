@@ -146,6 +146,53 @@ enum BillingTier {
   ENTERPRISE
 }
 
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  PAUSED
+  CANCELLED
+  EXPIRED
+  INCOMPLETE
+}
+
+enum BillingInterval {
+  MONTHLY
+  YEARLY
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  DISPUTED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  OPEN
+  PAID
+  VOID
+  UNCOLLECTIBLE
+}
+
+enum UsageMetric {
+  PROJECTS
+  MEMBERS
+  TEST_CASES
+  TEST_RUNS_MONTHLY
+  AUTOMATION_RUNS_MONTHLY
+  AI_TOKENS_MONTHLY
+  STORAGE_BYTES
+}
+
+enum PaymentProviderType {
+  LOCAL_TEST
+  STRIPE
+  CHAPA
+}
+
 enum AIProviderType {
   OPENAI
   ANTHROPIC
@@ -195,6 +242,9 @@ model User {
   isSuperAdmin         Boolean              @default(false)
   isEmailVerified      Boolean              @default(false)
   avatarUrl            String?
+  isSuspended          Boolean              @default(false)
+  suspensionReason     String?
+  suspendedAt          DateTime?
   createdAt            DateTime             @default(now())
   updatedAt            DateTime             @updatedAt
 
@@ -233,6 +283,9 @@ model Organization {
   name              String
   slug              String               @unique
   logoUrl           String?
+  isSuspended       Boolean              @default(false)
+  suspensionReason  String?
+  suspendedAt       DateTime?
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
 
@@ -240,6 +293,12 @@ model Organization {
   roles             Role[]
   invitations       Invitation[]
   subscription      Subscription?
+  subscriptionHistories SubscriptionHistory[]
+  usageLedgerEntries   UsageLedgerEntry[]
+  usageAdjustments     UsageAdjustment[]
+  payments          Payment[]
+  invoices          Invoice[]
+  paymentProviderConfigs PaymentProviderConfig[]
   projects          Project[]
   auditLogs         AuditLog[]
   aiProviderConfigs AIProviderConfig[]
@@ -361,33 +420,206 @@ model VerificationToken {
 }
 
 model BillingPlan {
-  id              String         @id @default(uuid())
-  name            String
-  tier            BillingTier    @unique
-  priceCentsMonth Int            @default(0)
-  maxProjects     Int            @default(3)
-  maxMembers      Int            @default(5)
-  maxTestCases    Int            @default(500)
-  maxTestRuns     Int            @default(100)
-  maxAiRequests   Int            @default(100)
-  storageMb       Int            @default(1024)
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  id                        String         @id @default(uuid())
+  name                      String
+  tier                      BillingTier    @unique
+  description               String?
+  priceCentsMonth           Int            @default(0)
+  priceCentsYear            Int            @default(0)
+  currency                  String         @default("USD")
+  isActive                  Boolean        @default(true)
+  isPublic                  Boolean        @default(true)
+  sortOrder                 Int            @default(0)
 
-  subscriptions   Subscription[]
+  // Quotas (-1 represents unlimited)
+  maxProjects               Int            @default(3)
+  maxMembers                Int            @default(5)
+  maxTestCases              Int            @default(500)
+  maxTestRuns               Int            @default(100) // legacy
+  maxTestRunsPerMonth       Int            @default(100)
+  maxAutomationRunsPerMonth Int            @default(50)
+  maxAiRequests             Int            @default(100) // legacy
+  aiTokenAllowance          Int            @default(100000)
+  storageMb                 Int            @default(1024) // legacy
+  storageBytes              BigInt         @default(1073741824) // 1GB
+
+  // Entitlement Feature Flags
+  allowCustomReports        Boolean        @default(false)
+  allowIntegrations         Boolean        @default(false)
+  allowAdvancedAnalytics    Boolean        @default(false)
+  allowSso                  Boolean        @default(false)
+  allowAuditExport          Boolean        @default(false)
+
+  createdAt                 DateTime       @default(now())
+  updatedAt                 DateTime       @updatedAt
+
+  subscriptions             Subscription[]
 }
 
 model Subscription {
-  id             String       @id @default(uuid())
-  organizationId String       @unique
-  billingPlanId  String
-  status         String       @default("ACTIVE") // ACTIVE, PAST_DUE, CANCELLED
-  currentPeriodEnd DateTime
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id                     String              @id @default(uuid())
+  organizationId         String              @unique
+  billingPlanId          String
+  status                 SubscriptionStatus  @default(TRIALING)
+  billingInterval        BillingInterval     @default(MONTHLY)
+  currentPeriodStart     DateTime            @default(now())
+  currentPeriodEnd       DateTime
+  trialStart             DateTime?
+  trialEnd               DateTime?
+  cancelAtPeriodEnd      Boolean             @default(false)
+  cancelledAt            DateTime?
+  endedAt                DateTime?
+  gracePeriodEnd         DateTime?
+  paymentProvider        PaymentProviderType @default(LOCAL_TEST)
+  providerCustomerId     String?
+  providerSubscriptionId String?
+  metadata               Json?
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
 
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  plan           BillingPlan  @relation(fields: [billingPlanId], references: [id])
+  organization           Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan                   BillingPlan         @relation(fields: [billingPlanId], references: [id])
+  history                SubscriptionHistory[]
+}
+
+model SubscriptionHistory {
+  id             String              @id @default(uuid())
+  subscriptionId String
+  organizationId String
+  fromStatus     SubscriptionStatus?
+  toStatus       SubscriptionStatus
+  fromPlanId     String?
+  toPlanId       String
+  reason         String?
+  changedById    String?
+  createdAt      DateTime            @default(now())
+
+  subscription   Subscription        @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([subscriptionId])
+}
+
+model UsageLedgerEntry {
+  id                 String       @id @default(uuid())
+  organizationId     String
+  metric             UsageMetric
+  quantity           Int
+  billingPeriodStart DateTime
+  billingPeriodEnd   DateTime
+  idempotencyKey     String       @unique
+  sourceType         String       // "TEST_RUN", "AUTOMATION_SESSION", "AI_GENERATION", "ATTACHMENT", "PROJECT_CREATE", etc.
+  sourceId           String?
+  metadata           Json?
+  recordedAt         DateTime     @default(now())
+
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, metric, recordedAt])
+  @@index([organizationId, billingPeriodStart, billingPeriodEnd])
+}
+
+model UsageAdjustment {
+  id                 String       @id @default(uuid())
+  organizationId     String
+  metric             UsageMetric
+  quantityDelta      Int
+  reason             String
+  adjustedById       String
+  billingPeriodStart DateTime
+  billingPeriodEnd   DateTime
+  createdAt          DateTime     @default(now())
+
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, metric])
+}
+
+model Payment {
+  id                String              @id @default(uuid())
+  organizationId    String
+  invoiceId         String?
+  amountCents       Int
+  currency          String              @default("USD")
+  status            PaymentStatus       @default(PENDING)
+  provider          PaymentProviderType @default(LOCAL_TEST)
+  providerPaymentId String?
+  isTestMode        Boolean             @default(true)
+  receiptUrl        String?
+  errorMessage      String?
+  metadata          Json?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  organization      Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invoice           Invoice?            @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([invoiceId])
+  @@index([providerPaymentId])
+}
+
+model Invoice {
+  id                 String        @id @default(uuid())
+  organizationId     String
+  invoiceNumber      String        @unique
+  status             InvoiceStatus @default(OPEN)
+  subtotalCents      Int
+  taxCents           Int           @default(0)
+  discountCents      Int           @default(0)
+  totalCents         Int
+  currency           String        @default("USD")
+  billingPeriodStart DateTime
+  billingPeriodEnd   DateTime
+  dueDate            DateTime
+  paidAt             DateTime?
+  pdfFileKey         String?
+  isTestMode         Boolean       @default(true)
+  metadata           Json?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  organization       Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  payments           Payment[]
+
+  @@index([organizationId])
+}
+
+model PaymentProviderConfig {
+  id                      String              @id @default(uuid())
+  organizationId          String?
+  provider                PaymentProviderType
+  isEnabled               Boolean             @default(true)
+  isTestMode              Boolean             @default(true)
+  publishableKey          String?
+  secretKeyEncrypted      String?
+  secretKeyIv             String?
+  secretKeyTag            String?
+  webhookSecretEncrypted  String?
+  webhookSecretIv         String?
+  webhookSecretTag        String?
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+
+  organization            Organization?       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, provider])
+}
+
+model PaymentWebhookEvent {
+  id              String              @id @default(uuid())
+  provider        PaymentProviderType
+  providerEventId String
+  eventType       String
+  status          String              @default("PENDING") // PENDING, PROCESSED, FAILED, IGNORED
+  payload         Json
+  processedAt     DateTime?
+  errorMessage    String?
+  createdAt       DateTime            @default(now())
+
+  @@unique([provider, providerEventId])
+  @@index([provider, status])
 }
 
 // ----------------------------------------------------

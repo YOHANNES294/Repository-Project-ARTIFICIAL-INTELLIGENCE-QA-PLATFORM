@@ -7,12 +7,14 @@ import {
   csvBulkImportSchema,
 } from '@ai-qa/validation';
 import { requireRole } from '../middleware/auth.js';
+import { requireEntitlement } from '../middleware/entitlement.js';
 import {
   OrganizationRole,
   TestPriority,
   TestType,
   TestCaseStatus,
   ApiResponse,
+  UsageMetric,
 } from '@ai-qa/shared-types';
 
 export const testCaseRouter: Router = Router({ mergeParams: true });
@@ -261,6 +263,7 @@ testCaseRouter.post(
     OrganizationRole.QA_MANAGER,
     OrganizationRole.ADMINISTRATOR
   ),
+  requireEntitlement(UsageMetric.TEST_CASES, 1),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const validated = createTestCaseSchema.parse(req.body);

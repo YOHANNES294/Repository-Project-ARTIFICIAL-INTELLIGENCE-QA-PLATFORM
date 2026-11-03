@@ -47,6 +47,12 @@ export class ConflictError extends AppError {
   }
 }
 
+export class PaymentRequiredError extends AppError {
+  constructor(message: string = 'Payment required / plan limit exceeded', details?: unknown) {
+    super(message, 402, 'ENTITLEMENT_LIMIT_EXCEEDED', details);
+  }
+}
+
 export function errorHandler(
   err: Error,
   req: Request,
@@ -71,6 +77,28 @@ export function errorHandler(
         code: err.code,
         message: err.message,
         details: err.details,
+      },
+    });
+    return;
+  }
+
+  if (typeof (err as any).status === 'number' || typeof (err as any).statusCode === 'number') {
+    const statusCode = (err as any).statusCode || (err as any).status;
+    const code = (err as any).code || 'ERROR';
+    const details = (err as any).details;
+    logger.warn(`Handled status error [${code}]: ${err.message}`, {
+      requestId,
+      statusCode,
+      details,
+      path: req.originalUrl,
+      method: req.method,
+    });
+    res.status(statusCode).json({
+      success: false,
+      error: {
+        code,
+        message: err.message,
+        details,
       },
     });
     return;

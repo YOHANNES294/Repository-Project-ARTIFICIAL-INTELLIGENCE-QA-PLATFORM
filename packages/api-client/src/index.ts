@@ -117,6 +117,19 @@ import {
   CreateWebhookInput,
   UpdateWebhookInput,
   WebhookDeliveryDto,
+  BillingPlanDto,
+  SubscriptionDto,
+  UsageSummaryDto,
+  InvoiceDto,
+  CheckoutSessionResultDto,
+  CreateBillingPlanInput,
+  UpdateBillingPlanInput,
+  ChangeSubscriptionInput,
+  CancelSubscriptionInput,
+  CreatePaymentCheckoutInput,
+  CreateUsageAdjustmentInput,
+  PlatformOverviewMetricsDto,
+  PlatformOrganizationListItemDto,
 } from '@ai-qa/shared-types';
 
 export interface ProjectListParams {
@@ -1982,6 +1995,160 @@ export class ApiClient {
     return this.request<WebhookDeliveryDto>(`${prefix}/${webhookId}/deliveries/${deliveryId}/retry`, {
       method: 'POST',
     });
+  }
+
+  // ----------------------------------------------------
+  // BILLING & SAAS ADMINISTRATION (MILESTONE 11)
+  // ----------------------------------------------------
+
+  async getSubscription(orgId?: string): Promise<SubscriptionDto> {
+    const prefix = orgId ? `/organizations/${orgId}/billing` : '/billing';
+    return this.request<SubscriptionDto>(prefix);
+  }
+
+  async getBillingPlans(): Promise<BillingPlanDto[]> {
+    return this.request<BillingPlanDto[]>('/billing/plans');
+  }
+
+  async getUsageSummary(orgId?: string): Promise<UsageSummaryDto> {
+    const prefix = orgId ? `/organizations/${orgId}/billing/usage` : '/billing/usage';
+    return this.request<UsageSummaryDto>(prefix);
+  }
+
+  async changeSubscription(payload: ChangeSubscriptionInput, orgId?: string): Promise<SubscriptionDto> {
+    const prefix = orgId ? `/organizations/${orgId}/billing/subscription` : '/billing/subscription';
+    return this.request<SubscriptionDto>(prefix, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async cancelSubscription(payload: CancelSubscriptionInput, orgId?: string): Promise<SubscriptionDto> {
+    const prefix = orgId ? `/organizations/${orgId}/billing/subscription/cancel` : '/billing/subscription/cancel';
+    return this.request<SubscriptionDto>(prefix, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async reactivateSubscription(orgId?: string): Promise<SubscriptionDto> {
+    const prefix = orgId ? `/organizations/${orgId}/billing/subscription/reactivate` : '/billing/subscription/reactivate';
+    return this.request<SubscriptionDto>(prefix, {
+      method: 'POST',
+    });
+  }
+
+  async createCheckoutSession(payload: CreatePaymentCheckoutInput, orgId?: string): Promise<CheckoutSessionResultDto> {
+    const prefix = orgId ? `/organizations/${orgId}/billing/checkout` : '/billing/checkout';
+    return this.request<CheckoutSessionResultDto>(prefix, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async getInvoices(orgId?: string): Promise<InvoiceDto[]> {
+    const prefix = orgId ? `/organizations/${orgId}/billing/invoices` : '/billing/invoices';
+    return this.request<InvoiceDto[]>(prefix);
+  }
+
+  async getInvoiceById(invoiceId: string, orgId?: string): Promise<InvoiceDto> {
+    const prefix = orgId ? `/organizations/${orgId}/billing/invoices/${invoiceId}` : `/billing/invoices/${invoiceId}`;
+    return this.request<InvoiceDto>(prefix);
+  }
+
+  async adjustUsage(payload: CreateUsageAdjustmentInput, orgId?: string): Promise<any> {
+    const prefix = orgId ? `/organizations/${orgId}/billing/usage/adjust` : '/billing/usage/adjust';
+    return this.request<any>(prefix, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  // Platform Super Administration
+  async getPlatformOverview(): Promise<PlatformOverviewMetricsDto> {
+    return this.request<PlatformOverviewMetricsDto>('/platform/overview');
+  }
+
+  async getPlatformOrganizations(params: {
+    search?: string;
+    page?: number;
+    limit?: number;
+    isSuspended?: boolean;
+  } = {}): Promise<{ data: PlatformOrganizationListItemDto[]; meta?: any }> {
+    const query = new URLSearchParams();
+    if (params.search) query.set('search', params.search);
+    if (params.page) query.set('page', String(params.page));
+    if (params.limit) query.set('limit', String(params.limit));
+    if (params.isSuspended !== undefined) query.set('isSuspended', String(params.isSuspended));
+    const qs = query.toString();
+    return this.requestWithMeta<PlatformOrganizationListItemDto[]>(`/platform/organizations${qs ? `?${qs}` : ''}`);
+  }
+
+  async getPlatformOrganizationDetails(orgId: string): Promise<any> {
+    return this.request<any>(`/platform/organizations/${orgId}`);
+  }
+
+  async suspendOrganization(orgId: string, reason: string): Promise<any> {
+    return this.request<any>(`/platform/organizations/${orgId}/suspend`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  }
+
+  async reactivateOrganization(orgId: string): Promise<any> {
+    return this.request<any>(`/platform/organizations/${orgId}/reactivate`, {
+      method: 'POST',
+    });
+  }
+
+  async getPlatformUsers(params: {
+    search?: string;
+    page?: number;
+    limit?: number;
+    isSuspended?: boolean;
+  } = {}): Promise<{ data: any[]; meta?: any }> {
+    const query = new URLSearchParams();
+    if (params.search) query.set('search', params.search);
+    if (params.page) query.set('page', String(params.page));
+    if (params.limit) query.set('limit', String(params.limit));
+    if (params.isSuspended !== undefined) query.set('isSuspended', String(params.isSuspended));
+    const qs = query.toString();
+    return this.requestWithMeta<any[]>(`/platform/users${qs ? `?${qs}` : ''}`);
+  }
+
+  async suspendUser(userId: string, reason: string): Promise<any> {
+    return this.request<any>(`/platform/users/${userId}/suspend`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  }
+
+  async reactivateUser(userId: string): Promise<any> {
+    return this.request<any>(`/platform/users/${userId}/reactivate`, {
+      method: 'POST',
+    });
+  }
+
+  async getPlatformPlans(): Promise<BillingPlanDto[]> {
+    return this.request<BillingPlanDto[]>('/platform/plans');
+  }
+
+  async createPlatformPlan(payload: CreateBillingPlanInput): Promise<BillingPlanDto> {
+    return this.request<BillingPlanDto>('/platform/plans', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updatePlatformPlan(planId: string, payload: UpdateBillingPlanInput): Promise<BillingPlanDto> {
+    return this.request<BillingPlanDto>(`/platform/plans/${planId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async getPlatformSystemHealth(): Promise<any> {
+    return this.request<any>('/platform/system/health');
   }
 }
 

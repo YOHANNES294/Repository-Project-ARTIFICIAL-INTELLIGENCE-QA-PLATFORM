@@ -183,3 +183,42 @@ Outbound HTTP dispatches (team integrations, webhooks, connectivity test pings) 
 - User quiet hours and category opt-outs are strictly enforced for operational alerts (defects, assignments, executions).
 - However, security-critical events (password changes, account alerts, token revocations) **unconditionally bypass quiet hours and preference suppressions**, guaranteeing that users are immediately informed of potential security events.
 
+---
+
+## 13. Milestone 11 — Billing & SaaS Administration Security
+
+### 13.1 Platform Super-Admin RBAC Isolation
+- **Strict Boundary Separation**:
+  - The platform super-admin capability is anchored strictly to `User.isSuperAdmin === true`.
+  - Organization Owners and Administrators (`OrganizationRole.OWNER`, `OrganizationRole.ADMINISTRATOR`) hold no super-administrative rights over the SaaS platform or other tenants.
+  - All `/api/v1/platform/*` endpoints are guarded by `requireSuperAdmin` middleware. Any call originating from a tenant owner without global super-admin status is rejected with **HTTP 403 Forbidden**.
+- **Tenant & User Suspension Enforcement**:
+  - `authenticate` and `requireTenant` middleware actively evaluate `User.isSuspended` and `Organization.isSuspended` on every authenticated request.
+  - Suspended entities are instantly blocked from API execution with HTTP 403 and explicit error code `USER_SUSPENDED` or `ORGANIZATION_SUSPENDED`.
+  - Suspension and reactivation operations require a non-empty audit rationale and record immutable entries in `AuditLog`.
+
+### 13.2 Payment Gateway Secret Encryption (AES-256-GCM)
+- Sensitive third-party payment provider secrets (Stripe private keys, Chapa secret keys, webhook secrets) stored in `PaymentProviderConfig` are encrypted at rest using AES-256-GCM.
+- Each encrypted credential maintains an independent, cryptographically random 12-byte initialization vector (`secretKeyIv`) and a 16-byte authentication tag (`secretKeyTag`).
+- Plaintext secrets are never logged or exposed in API responses; responses return masked hints (e.g. `sk_t•••••••5678`).
+
+### 13.3 Inbound Payment Webhook Signature Verification & Replay Protection
+- Inbound webhooks (`/api/v1/payment-webhooks/:provider`) process raw request bodies to verify cryptographic signatures before parsing:
+  - Stripe: `stripe-signature` timestamp and HMAC-SHA256 signature verification.
+  - Chapa: `x-chapa-signature` HMAC-SHA256 verification.
+  - Local Test Gateway: `X-Signature` HMAC-SHA256 verification.
+- Payloads with missing or mismatched cryptographic signatures are rejected with HTTP 401 Unauthorized.
+- `PaymentWebhookEvent` records incoming `provider` and `eventId` within a unique constraint:
+  - Repeated webhook deliveries are detected as duplicates and acknowledged with HTTP 200 without executing duplicate credit, charge, or status mutation logic.
+
+### 13.4 Server-Side Entitlement Enclosure & Financial Integrity
+- **HTTP 402 Payment Required**:
+  - Quotas cannot be bypassed via client-side manipulation. All resource creations (projects, members, test cases, test runs) pass through `assertEntitlement`.
+  - Exceeding plan limits yields an immediate HTTP 402 with code `ENTITLEMENT_LIMIT_EXCEEDED` and required quota telemetry.
+- **Auditable Usage Metering & Idempotency**:
+  - `UsageLedgerEntry` prevents double-metering across asynchronous job retries by enforcing uniqueness on `(organizationId, metric, idempotencyKey)`.
+- **Financial Precision**:
+  - All financial amounts are stored as 64-bit integer cents (`amountCents`) in normalized database records, avoiding IEEE 754 floating-point rounding vulnerabilities in billing calculations.
+- **Clear Test-Mode Distinction**:
+  - Test transactions and invoices maintain explicit `isTestMode: true` markers in the database and render conspicuous badges on all HTML statements, preventing test-payment confusion in corporate auditing.
+

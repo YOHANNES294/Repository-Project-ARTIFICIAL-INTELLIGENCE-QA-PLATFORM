@@ -908,3 +908,176 @@ In support of multi-dimensional coverage analytics, the [`TestCase`](file:///c:/
   - `@@index([webhookId, status])`
   - `@@index([eventId])`
 
+---
+
+## 13. Billing, Subscription & SaaS Administration Models (Milestone 11)
+
+### 13.1 `BillingPlan`
+- Dynamic, database-backed plan catalog governing quotas and feature allowances.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `name`: String (`Free`, `Starter`, `Professional`, `Enterprise`)
+  - `tier`: `BillingTier` (`FREE`, `STARTER`, `PROFESSIONAL`, `ENTERPRISE`, Unique)
+  - `description`: Text?
+  - `priceCentsMonth`: Int (Default: 0)
+  - `priceCentsYear`: Int (Default: 0)
+  - `currency`: String (Default: "USD")
+  - `isActive`: Boolean (Default: true)
+  - `isPublic`: Boolean (Default: true)
+  - `sortOrder`: Int (Default: 0)
+  - `maxProjects`: Int (-1 = unlimited)
+  - `maxMembers`: Int (-1 = unlimited)
+  - `maxTestCases`: Int (-1 = unlimited)
+  - `maxTestRunsPerMonth`: Int (-1 = unlimited)
+  - `maxAutomationRunsPerMonth`: Int (-1 = unlimited)
+  - `aiTokenAllowance`: Int (Default: 100000, -1 = unlimited)
+  - `storageBytes`: BigInt (Default: 1073741824 = 1GB)
+  - `allowCustomReports`: Boolean (Default: false)
+  - `allowIntegrations`: Boolean (Default: false)
+  - `allowAdvancedAnalytics`: Boolean (Default: false)
+  - `allowSso`: Boolean (Default: false)
+  - `allowAuditExport`: Boolean (Default: false)
+  - `createdAt`, `updatedAt`: DateTime
+
+### 13.2 `Subscription`
+- Tenant subscription lifecycle and active state.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `organizationId`: UUID (Foreign Key -> `Organization`, Unique, `onDelete: Cascade`)
+  - `billingPlanId`: UUID (Foreign Key -> `BillingPlan`)
+  - `status`: `SubscriptionStatus` (`TRIALING`, `ACTIVE`, `PAST_DUE`, `PAUSED`, `CANCELLED`, `EXPIRED`, `INCOMPLETE`)
+  - `billingInterval`: `BillingInterval` (`MONTHLY`, `YEARLY`)
+  - `currentPeriodStart`: DateTime (Default: now)
+  - `currentPeriodEnd`: DateTime
+  - `trialStart`, `trialEnd`: DateTime?
+  - `cancelAtPeriodEnd`: Boolean (Default: false)
+  - `cancelledAt`: DateTime?
+  - `endedAt`: DateTime?
+  - `gracePeriodEnd`: DateTime?
+  - `paymentProvider`: `PaymentProviderType` (`LOCAL_TEST`, `STRIPE`, `CHAPA`)
+  - `providerCustomerId`, `providerSubscriptionId`: String?
+  - `metadata`: Json?
+  - `createdAt`, `updatedAt`: DateTime
+
+### 13.3 `SubscriptionHistory`
+- Immutable audit log of subscription transitions and plan changes.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `subscriptionId`: UUID (Foreign Key -> `Subscription`, `onDelete: Cascade`)
+  - `organizationId`: UUID (Foreign Key -> `Organization`, `onDelete: Cascade`)
+  - `fromStatus`: `SubscriptionStatus`?
+  - `toStatus`: `SubscriptionStatus`
+  - `fromPlanId`: String?
+  - `toPlanId`: String
+  - `reason`: String?
+  - `changedById`: String?
+  - `createdAt`: DateTime (Default: now)
+- **Constraints & Indexes**:
+  - `@@index([organizationId])`
+  - `@@index([subscriptionId])`
+
+### 13.4 `UsageLedgerEntry`
+- Immutable consumption ledger with unique idempotency keys for exact-once metering.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `organizationId`: UUID (Foreign Key -> `Organization`, `onDelete: Cascade`)
+  - `metric`: `UsageMetric` (`PROJECTS`, `MEMBERS`, `TEST_CASES`, `TEST_RUNS_MONTHLY`, `AUTOMATION_RUNS_MONTHLY`, `AI_TOKENS_MONTHLY`, `STORAGE_BYTES`)
+  - `quantity`: Int
+  - `billingPeriodStart`: DateTime
+  - `billingPeriodEnd`: DateTime
+  - `idempotencyKey`: String (Unique, e.g. `run_{runId}`)
+  - `sourceType`: String (`TEST_RUN`, `AUTOMATION_SESSION`, `AI_GENERATION`, `ATTACHMENT`, `PROJECT_CREATE`)
+  - `sourceId`: String?
+  - `metadata`: Json?
+  - `recordedAt`: DateTime (Default: now)
+- **Constraints & Indexes**:
+  - `@@index([organizationId, metric, recordedAt])`
+  - `@@index([organizationId, billingPeriodStart, billingPeriodEnd])`
+
+### 13.5 `UsageAdjustment`
+- Auditable corrections and credits applied to tenant usage.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `organizationId`: UUID (Foreign Key -> `Organization`, `onDelete: Cascade`)
+  - `metric`: `UsageMetric`
+  - `quantityDelta`: Int (positive or negative)
+  - `reason`: String
+  - `adjustedById`: String
+  - `billingPeriodStart`: DateTime
+  - `billingPeriodEnd`: DateTime
+  - `createdAt`: DateTime (Default: now)
+- **Constraints & Indexes**:
+  - `@@index([organizationId, metric])`
+
+### 13.6 `Payment`
+- Recorded payment transactions with provider references and receipt links.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `organizationId`: UUID (Foreign Key -> `Organization`, `onDelete: Cascade`)
+  - `invoiceId`: UUID? (Foreign Key -> `Invoice`, `onDelete: SetNull`)
+  - `amountCents`: Int
+  - `currency`: String (Default: "USD")
+  - `status`: `PaymentStatus` (`PENDING`, `SUCCEEDED`, `FAILED`, `REFUNDED`, `DISPUTED`)
+  - `provider`: `PaymentProviderType` (`LOCAL_TEST`, `STRIPE`, `CHAPA`)
+  - `providerPaymentId`: String?
+  - `isTestMode`: Boolean (Default: true)
+  - `receiptUrl`: String?
+  - `errorMessage`: String?
+  - `metadata`: Json?
+  - `createdAt`, `updatedAt`: DateTime
+- **Constraints & Indexes**:
+  - `@@index([organizationId])`
+  - `@@index([invoiceId])`
+  - `@@index([providerPaymentId])`
+
+### 13.7 `Invoice`
+- Commercial and accounting statements with PDF/HTML presentation.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `organizationId`: UUID (Foreign Key -> `Organization`, `onDelete: Cascade`)
+  - `invoiceNumber`: String (Unique, e.g. `INV-2026-0001`)
+  - `status`: `InvoiceStatus` (`DRAFT`, `OPEN`, `PAID`, `VOID`, `UNCOLLECTIBLE`)
+  - `subtotalCents`, `taxCents`, `discountCents`, `totalCents`: Int
+  - `currency`: String (Default: "USD")
+  - `billingPeriodStart`, `billingPeriodEnd`: DateTime
+  - `dueDate`: DateTime
+  - `paidAt`: DateTime?
+  - `pdfFileKey`: String?
+  - `isTestMode`: Boolean (Default: true)
+  - `metadata`: Json?
+  - `createdAt`, `updatedAt`: DateTime
+- **Constraints & Indexes**:
+  - `@@index([organizationId])`
+
+### 13.8 `PaymentProviderConfig`
+- AES-256-GCM encrypted provider credentials.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `organizationId`: UUID? (Foreign Key -> `Organization`, `onDelete: Cascade`)
+  - `provider`: `PaymentProviderType`
+  - `isEnabled`: Boolean (Default: true)
+  - `isTestMode`: Boolean (Default: true)
+  - `publishableKey`: String?
+  - `secretKeyEncrypted`, `secretKeyIv`, `secretKeyTag`: String?
+  - `webhookSecretEncrypted`, `webhookSecretIv`, `webhookSecretTag`: String?
+  - `createdAt`, `updatedAt`: DateTime
+- **Constraints & Indexes**:
+  - `@@unique([organizationId, provider])`
+
+### 13.9 `PaymentWebhookEvent`
+- Cryptographic inbound webhook event deduplication and status tracking.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `provider`: `PaymentProviderType`
+  - `providerEventId`: String
+  - `eventType`: String
+  - `status`: String (Default: "PENDING", values: `PENDING`, `PROCESSED`, `FAILED`, `IGNORED`)
+  - `payload`: Json
+  - `processedAt`: DateTime?
+  - `errorMessage`: String?
+  - `createdAt`: DateTime (Default: now)
+- **Constraints & Indexes**:
+  - `@@unique([provider, providerEventId])`
+  - `@@index([provider, status])`
+
+

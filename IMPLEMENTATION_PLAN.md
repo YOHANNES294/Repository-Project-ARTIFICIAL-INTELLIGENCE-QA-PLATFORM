@@ -331,18 +331,35 @@ ARTIFICIAL INTELLIGENCE QA PLATFORM/
 
 ---
 
-## 5. Upcoming Milestone Roadmap (10 — 12)
+### Milestone 11 — Billing & SaaS Administration (IN PROGRESS)
+- **Database-Backed Plan & Subscription Management**:
+  - Dynamic `BillingPlan` catalog in PostgreSQL (Free, Starter, Professional, Enterprise) defining real entitlement limits without hardcoded constraints in application code.
+  - Subscription lifecycle management (`Subscription` and `SubscriptionHistory`) covering all states: `TRIALING`, `ACTIVE`, `PAST_DUE`, `PAUSED`, `CANCELLED`, `EXPIRED`, `INCOMPLETE` with trial periods, upgrade/downgrade pro-ration, and grace period handling.
+- **Server-Side Entitlement Enforcement Service & Middleware**:
+  - Centralized `EntitlementService` and `requireEntitlement` middleware intercepting quota-bounded actions: project creation, member invites, test cases, monthly executions, automation runs, AI tokens, and storage allocations.
+  - Non-destructive downgrade guarantee: Exceeded limits block new resource creation but never silently delete existing tenant projects, test cases, or defects.
+- **Auditable Usage Metering & Immutable Ledger**:
+  - `UsageLedgerEntry` recording immutable, time-stamped metric consumption with unique `idempotencyKey` preventing double-counting on job retries.
+  - `UsageAdjustment` model providing an auditable, non-destructive ledger correction mechanism.
+  - Concurrency-safe atomic increments and database transaction locks for quota checks and consumption.
+- **Provider-Independent Payment Architecture & Encrypted Credentials**:
+  - `PaymentProviderInterface` abstraction supporting `LocalTestPaymentProvider` (development & testing, clearly labeled), `StripePaymentProvider`, and `ChapaPaymentProvider`.
+  - AES-256-GCM symmetric encryption for payment provider secrets (`secretKeyEncrypted`, `secretKeyIv`, `secretKeyTag`) preventing plaintext leaks in logs and responses.
+  - Multi-currency support (USD, ETB, EUR), integer cents storage, discount codes, and localized tax handling.
+- **Cryptographic Payment Webhooks**:
+  - Inbound webhook processing with signature verification (`X-Signature`), timestamp expiration checks, and idempotent event deduplication via `PaymentWebhookEvent`.
+- **Invoices, Receipts & Billing History**:
+  - Normalized `Invoice` and `Payment` models with explicit test-mode indicators (`isTestMode: true`) and downloadable PDF/HTML invoice rendering.
+- **Organization Billing Workspace UI**:
+  - Customer-facing `/settings/billing` with plan overview, usage progress bars against quotas, upgrade/downgrade selection, cancellation workflows, and invoice history.
+  - Strict RBAC: only Organization Owners and Admins can manage billing; engineers and viewers have read-only visibility.
+- **Platform Super Administration UI & API**:
+  - Platform-wide administration suite at `/platform` guarded by `requireSuperAdmin` middleware verifying `req.user.isSuperAdmin`.
+  - Organization inspection, tenant suspension/reactivation with mandatory reason logging in `AuditLog`, global plan management, platform-wide payment tracking, and system health telemetry.
 
-### Milestone 10 — Integrations & Webhooks
-- **CI/CD Triggers**: GitHub Actions, GitLab CI, and Jenkins integration for triggering test runs and updating commit statuses.
-- **Collaboration Webhooks**: Real-time notifications for Slack and Microsoft Teams on run completions, milestone blocks, or blocker defects.
-- **Public API & Webhook Dispatcher**: Signature-verified webhook delivery with automatic retry and backoff.
+---
 
-### Milestone 11 — Enterprise Audit & Security Hardening
-- **SSO & SAML 2.0**: Enterprise Single Sign-On (Okta, Azure AD, Google Workspace).
-- **SCIM Provisioning**: Automated user provisioning and de-provisioning.
-- **Comprehensive Audit Log**: Tamper-evident audit trail with exportable compliance reports (SOC 2, ISO 27001).
-- **IP Allowlisting & Session Restrictions**: Organization-level security policy controls.
+## 5. Upcoming Milestone Roadmap (12)
 
 ### Milestone 12 — Production Deployment & Launch Readiness
 - **Production Containerization**: Multi-stage hardened Docker images for API, Worker, and Web.

@@ -1,13 +1,15 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { testRunService } from '../services/test-run.service.js';
 import { requireRole } from '../middleware/auth.js';
+import { requireEntitlement } from '../middleware/entitlement.js';
+import { recordUsage } from '../services/billing/usage-ledger.service.js';
 import {
   createTestRunSchema,
   updateTestRunSchema,
   transitionRunStatusSchema,
   assignRunCasesSchema,
 } from '@ai-qa/validation';
-import { OrganizationRole, TestRunStatus, ExecutionStatus, ApiResponse } from '@ai-qa/shared-types';
+import { OrganizationRole, TestRunStatus, ExecutionStatus, ApiResponse, UsageMetric } from '@ai-qa/shared-types';
 
 export const testRunRouter: Router = Router({ mergeParams: true });
 
@@ -75,6 +77,7 @@ testRunRouter.post(
     OrganizationRole.QA_ENGINEER,
     OrganizationRole.AUTOMATION_ENGINEER
   ),
+  requireEntitlement(UsageMetric.TEST_RUNS_MONTHLY, 1),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const projectId = req.params.projectId as string;
@@ -83,6 +86,17 @@ testRunRouter.post(
         ipAddress: req.ip,
         userAgent: req.headers['user-agent'],
       });
+
+      if (req.organizationId) {
+        await recordUsage({
+          organizationId: req.organizationId,
+          metric: UsageMetric.TEST_RUNS_MONTHLY,
+          quantity: 1,
+          idempotencyKey: `run_${run.id}`,
+          sourceType: 'TEST_RUN',
+          sourceId: run.id,
+        }).catch(() => {});
+      }
 
       const response: ApiResponse = {
         success: true,

@@ -11,6 +11,9 @@ import { organizationRouter } from './routes/org.routes.js';
 import { projectRouter } from './routes/project.routes.js';
 import automationRouter from './routes/automation.routes.js';
 import { notificationRouter } from './routes/notification.routes.js';
+import { billingRouter } from './routes/billing.routes.js';
+import { paymentWebhookRouter } from './routes/payment-webhook.routes.js';
+import { platformRouter } from './routes/platform.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -23,6 +26,9 @@ export function createApp(): Express {
       credentials: true,
     })
   );
+
+  // Mount payment webhooks BEFORE global JSON parser so HMAC signature verification receives exact raw payload
+  app.use('/api/v1/billing/webhooks', paymentWebhookRouter);
 
   // Body parsers
   app.use(express.json({ limit: '10mb' }));
@@ -53,6 +59,9 @@ export function createApp(): Express {
   app.use('/api/v1', healthRouter);
   app.use('/api/v1/auth', authRouter);
   app.use('/api/v1/notifications', notificationRouter);
+  app.use('/api/v1/organizations/:orgId/billing', billingRouter);
+  app.use('/api/v1/billing', billingRouter);
+  app.use('/api/v1/platform', platformRouter);
   app.use('/api/v1/organizations', organizationRouter);
   app.use('/api/v1/projects/:projectId/automation', automationRouter);
   app.use('/api/v1/projects', projectRouter);

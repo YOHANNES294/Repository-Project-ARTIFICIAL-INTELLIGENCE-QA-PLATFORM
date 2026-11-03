@@ -208,3 +208,77 @@ To prevent Server-Side Request Forgery (SSRF) when communicating with external U
 - Prevents replay attacks and verifies payload integrity.
 - Failed webhook requests are recorded in `WebhookDelivery` and can be manually or programmatically retried. Retries exceeding 5 attempts transition to a `DEAD_LETTER` state.
 
+---
+
+## 8. Billing & SaaS Administration Architecture (Milestone 11)
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                   Billing & Entitlement Pipeline                       │
+├──────────────┬──────────────────┬─────────────────┬────────────────────┤
+│ 1. Dynamic   │ 2. Entitlement   │ 3. Usage Ledger │ 4. Payment Gateway │
+│    Plans &   │    Enforcement   │    & Quotas     │    (Stripe, Chapa, │
+│ Subscriptions│   (402 / 403)    │  (Idempotency)  │    Local Test)     │
+└──────────────┴──────────────────┴─────────────────┴────────────────────┘
+```
+
+### 8.1 Database-Backed Plan & Subscription Management
+The SaaS billing foundation operates with zero hardcoded pricing or tier quotas:
+1. **Dynamic Billing Catalog (`BillingPlan`)**:
+   - Tiers: `FREE`, `STARTER`, `PROFESSIONAL`, `ENTERPRISE`.
+   - Dynamic quotas: `maxProjects`, `maxMembers`, `maxTestCases`, `maxMonthlyRuns`, `maxStorageBytes`, `maxAiTokens`.
+   - Feature flags: `hasAdvancedAnalytics`, `hasAutomatedReporting`, `hasAiFeatures`, `hasCiCdIntegration`, `hasSlaSupport`.
+2. **Subscription Lifecycle State Machine (`Subscription`)**:
+   - States: `TRIALING`, `ACTIVE`, `PAST_DUE`, `PAUSED`, `CANCELLED`, `EXPIRED`, `INCOMPLETE`.
+   - Billing Intervals: `MONTHLY`, `ANNUAL` (with automated 20% annual discount computation).
+   - Immutable historical state transition tracking in `SubscriptionHistory`.
+   - Automatic trial expiry and billing renewal cycles.
+
+### 8.2 Server-Side Entitlement Enforcement
+- **Centralized Guard Engine (`entitlement.service.ts` & `entitlement.ts` middleware)**:
+  - `requireEntitlement(metric, amount)`: Intercepts mutating requests on bounded resources.
+    - Projects (`POST /api/v1/projects`) checks `PROJECTS`.
+    - Members (`POST /api/v1/organizations/:orgId/members`) checks `MEMBERS`.
+    - Test Cases (`POST /api/v1/projects/:projectId/test-cases`) checks `TEST_CASES`.
+    - Monthly Test Runs (`POST /api/v1/projects/:projectId/test-runs`) checks `MONTHLY_TEST_RUNS`.
+  - Exceeded quotas return RFC-compliant **HTTP 402 Payment Required** with code `ENTITLEMENT_LIMIT_EXCEEDED` and detailed entitlement telemetry.
+  - `requireFeatureFlag(featureName)`: Intercepts advanced tier capabilities, returning **HTTP 403 Forbidden** with code `FEATURE_NOT_INCLUDED_IN_PLAN`.
+- **Non-Destructive Customer Data Guarantee**:
+  - Plan downgrades or subscription cancellations downgrade subsequent write allowances, but **never** delete, hide, or corrupt existing tenant projects, test cases, or defects.
+
+### 8.3 Auditable Usage Metering & Immutable Ledger
+- **`UsageLedgerEntry`**:
+  - Records usage events atomically with `metric`, `quantity`, `dimension`, and unique `idempotencyKey`.
+  - Background retries with identical idempotency keys are acknowledged without double-metering.
+- **`UsageAdjustment`**:
+  - Provides an auditable mechanism for customer support credits, plan quota overrides, or administrative deductions without mutating historical records.
+
+### 8.4 Provider-Independent Payment Gateway & AES-256-GCM Encryption
+- Unified `PaymentProviderInterface` supports pluggable adapters:
+  - `StripePaymentProvider`: Standard cloud card checkout and webhooks.
+  - `ChapaPaymentProvider`: International and local African payment gateway with multi-currency support (ETB, USD, EUR).
+  - `LocalTestPaymentProvider`: Deterministic, sandbox payment gateway requiring zero external API keys for testing and CI.
+- **Credential Protection**:
+  - Gateway API keys and webhook secrets stored in `PaymentProviderConfig` are encrypted at rest using AES-256-GCM (`secretKeyEncrypted`, `secretKeyIv`, `secretKeyTag`).
+  - Integer cents currency storage (`amountCents`) avoids floating-point inaccuracies.
+  - Clear test-mode labeling (`isTestMode: true`) across all payment flows.
+
+### 8.5 Inbound Payment Webhooks & Replay Defense
+- `POST /api/v1/payment-webhooks/:provider`:
+  - Receives provider webhook payloads with raw body processing for cryptographic signature validation (`Stripe-Signature`, `X-Chapa-Signature`, `X-Signature`).
+  - Records events in `PaymentWebhookEvent` to guarantee idempotent execution and defend against webhook replay cascades.
+  - Automatically transitions subscription status to `ACTIVE` upon payment completion.
+
+### 8.6 Invoices & Statements
+- Normalized `Invoice` and `Payment` models linked to tenant subscriptions.
+- `generateInvoiceHtml()`: Renders responsive, printable HTML statements featuring tenant details, line-item breakdowns, and clear test-mode badges.
+
+### 8.7 Platform Super Administration
+- Guarded by `requireSuperAdmin` middleware:
+  - Validates `req.user.isSuperAdmin === true`.
+  - Standard tenant organization owners (`OrganizationRole.OWNER`) are strictly rejected with HTTP 403 Forbidden.
+- Capabilities:
+  - Executive SaaS KPIs: ARR, MRR, tenant counts, subscription breakdowns, total transactions.
+  - Organization & User lifecycle suspension with mandatory audit logging (`AuditLog`) and suspension reason.
+  - Live system health telemetry: database connectivity, uptime, process memory, and runtime metadata.
+

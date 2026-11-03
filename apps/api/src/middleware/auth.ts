@@ -50,11 +50,21 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
         firstName: true,
         lastName: true,
         isSuperAdmin: true,
+        isSuspended: true,
+        suspensionReason: true,
       },
     });
 
     if (!user) {
       throw new UnauthorizedError('User account not found or deactivated');
+    }
+
+    if (user.isSuspended && !user.isSuperAdmin) {
+      throw new ForbiddenError(
+        user.suspensionReason
+          ? `Your account has been suspended: ${user.suspensionReason}`
+          : 'Your account has been suspended'
+      );
     }
 
     req.user = user;
@@ -118,6 +128,22 @@ export async function requireTenant(req: Request, _res: Response, next: NextFunc
       throw new ForbiddenError('Tenant access denied: You are not a member of this organization');
     }
 
+    // Verify organization suspension status if model is available
+    const org = prisma.organization?.findUnique
+      ? await prisma.organization.findUnique({
+          where: { id: targetOrgId },
+          select: { isSuspended: true, suspensionReason: true },
+        })
+      : null;
+
+    if (org?.isSuspended && !req.user.isSuperAdmin) {
+      throw new ForbiddenError(
+        org.suspensionReason
+          ? `Organization has been suspended: ${org.suspensionReason}`
+          : 'Organization has been suspended'
+      );
+    }
+
     req.organizationId = targetOrgId;
     if (membership) {
       req.membership = {
@@ -170,3 +196,16 @@ export function requireRole(...allowedRoles: OrganizationRole[]) {
     next();
   };
 }
+
+export function requireSuperAdmin(req: Request, _res: Response, next: NextFunction): void {
+  if (!req.user) {
+    return next(new UnauthorizedError('Authentication required'));
+  }
+
+  if (!req.user.isSuperAdmin) {
+    return next(new ForbiddenError('Platform super administration privileges required'));
+  }
+
+  next();
+}
+

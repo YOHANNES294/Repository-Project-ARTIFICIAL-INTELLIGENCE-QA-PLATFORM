@@ -535,3 +535,41 @@ Base route: `/api/v1/projects/:projectId/automation`
 - `GET /api/v1/projects/:projectId/webhooks/:id/deliveries`: Lists delivery logs including payload, status, HTTP code, latency, and error message.
 - `POST /api/v1/projects/:projectId/webhooks/:id/deliveries/:deliveryId/retry`: Retries a failed or dead-letter delivery.
 
+---
+
+## 13. Billing, Subscriptions & SaaS Administration (Milestone 11)
+
+### 13.1 Organization Billing & Subscription Endpoints
+- `GET /api/v1/organizations/:orgId/billing` or `GET /api/v1/billing`: Retrieves active subscription, billing plan, and period status.
+- `GET /api/v1/billing/plans`: Retrieves public catalog of database-backed billing plans (Free, Starter, Professional, Enterprise) with quotas and feature allowances.
+- `GET /api/v1/organizations/:orgId/billing/usage`: Real-time meter consumption calculated from active resources and immutable ledger against plan quotas.
+- `POST /api/v1/organizations/:orgId/billing/subscription`: Upgrades or changes subscription tier (`planTier`, `interval`). Records auditable `SubscriptionHistory`.
+- `POST /api/v1/organizations/:orgId/billing/subscription/cancel`: Cancels subscription immediately or schedules cancellation at period end. Preserves customer data without deletion.
+- `POST /api/v1/organizations/:orgId/billing/subscription/reactivate`: Revokes pending period-end cancellation.
+- `POST /api/v1/organizations/:orgId/billing/checkout`: Initiates checkout session (`LOCAL_TEST`, `STRIPE`, `CHAPA`) and returns checkout URL.
+- `GET /api/v1/organizations/:orgId/billing/invoices`: Retrieves organization invoice history.
+- `GET /api/v1/organizations/:orgId/billing/invoices/:invoiceId`: Retrieves individual invoice and payment records.
+- `GET /api/v1/organizations/:orgId/billing/invoices/:invoiceId/html`: Renders printable, responsive HTML invoice statement with test-mode badges when applicable.
+- `POST /api/v1/organizations/:orgId/billing/usage/adjust`: Records auditable delta in `UsageAdjustment` with required reason.
+
+### 13.2 Payment Provider Webhooks
+- `POST /api/v1/billing/webhooks/:provider`: Public inbound payment webhook endpoint (`LOCAL_TEST`, `STRIPE`, `CHAPA`).
+  - Verifies cryptographic signature (`X-Signature`, `stripe-signature`, `x-chapa-signature`).
+  - Enforces replay protection and idempotency via `PaymentWebhookEvent`.
+  - Automatically activates subscription and marks invoice and payment as `PAID` / `SUCCEEDED`.
+
+### 13.3 Platform Super Administration (`requireSuperAdmin`)
+- `GET /api/v1/platform/overview`: High-level SaaS KPI scorecard (total/active/suspended organizations, users, ARR, MRR, subscriptions by status & tier, recent payments).
+- `GET /api/v1/platform/organizations`: Searchable, paginated tenant directory with member counts, project counts, and subscription status.
+- `GET /api/v1/platform/organizations/:orgId`: Deep tenant inspection with usage meters and recent payment records.
+- `POST /api/v1/platform/organizations/:orgId/suspend`: Suspends organization tenant with mandatory reason recorded to `AuditLog`.
+- `POST /api/v1/platform/organizations/:orgId/reactivate`: Restores access to suspended organization tenant.
+- `GET /api/v1/platform/users`: Searchable, paginated user directory.
+- `POST /api/v1/platform/users/:userId/suspend`: Suspends user account with mandatory reason.
+- `POST /api/v1/platform/users/:userId/reactivate`: Restores suspended user account.
+- `GET /api/v1/platform/plans`: Lists all plans including internal/inactive tiers.
+- `POST /api/v1/platform/plans`: Creates a new dynamic billing plan with custom quotas.
+- `PATCH /api/v1/platform/plans/:planId`: Updates dynamic billing plan entitlements and pricing.
+- `GET /api/v1/platform/system/health`: Live telemetry of database connectivity, uptime, process memory, and Node version.
+
+

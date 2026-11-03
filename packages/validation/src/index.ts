@@ -1036,3 +1036,121 @@ export type TestIntegrationSchema = z.infer<typeof testIntegrationSchema>;
 export type CreateWebhookSchema = z.infer<typeof createWebhookSchema>;
 export type UpdateWebhookSchema = z.infer<typeof updateWebhookSchema>;
 
+// ----------------------------------------------------
+// MILESTONE 11 — BILLING & SAAS ADMINISTRATION
+// ----------------------------------------------------
+
+export const billingTierEnum = z.enum(['FREE', 'STARTER', 'PROFESSIONAL', 'ENTERPRISE']);
+export const subscriptionStatusEnum = z.enum([
+  'TRIALING',
+  'ACTIVE',
+  'PAST_DUE',
+  'PAUSED',
+  'CANCELLED',
+  'EXPIRED',
+  'INCOMPLETE',
+]);
+export const billingIntervalEnum = z.enum(['MONTHLY', 'YEARLY']);
+export const paymentStatusEnum = z.enum(['PENDING', 'SUCCEEDED', 'FAILED', 'REFUNDED', 'DISPUTED']);
+export const invoiceStatusEnum = z.enum(['DRAFT', 'OPEN', 'PAID', 'VOID', 'UNCOLLECTIBLE']);
+export const usageMetricEnum = z.enum([
+  'PROJECTS',
+  'MEMBERS',
+  'TEST_CASES',
+  'TEST_RUNS_MONTHLY',
+  'AUTOMATION_RUNS_MONTHLY',
+  'AI_TOKENS_MONTHLY',
+  'STORAGE_BYTES',
+]);
+export const paymentProviderTypeEnum = z.enum(['LOCAL_TEST', 'STRIPE', 'CHAPA']);
+
+export const createBillingPlanSchema = z.object({
+  name: z.string().min(2, 'Plan name must be at least 2 characters').max(100),
+  tier: billingTierEnum,
+  description: z.string().max(500).optional(),
+  priceCentsMonth: z.number().int().min(0, 'Monthly price cannot be negative'),
+  priceCentsYear: z.number().int().min(0, 'Yearly price cannot be negative'),
+  currency: z.string().length(3).default('USD'),
+  isActive: z.boolean().default(true),
+  isPublic: z.boolean().default(true),
+  sortOrder: z.number().int().default(0),
+  maxProjects: z.number().int().min(-1),
+  maxMembers: z.number().int().min(-1),
+  maxTestCases: z.number().int().min(-1),
+  maxTestRunsPerMonth: z.number().int().min(-1),
+  maxAutomationRunsPerMonth: z.number().int().min(-1),
+  aiTokenAllowance: z.number().int().min(-1),
+  storageBytes: z.number().int().min(-1).optional(),
+  allowCustomReports: z.boolean().default(false),
+  allowIntegrations: z.boolean().default(false),
+  allowAdvancedAnalytics: z.boolean().default(false),
+  allowSso: z.boolean().default(false),
+  allowAuditExport: z.boolean().default(false),
+});
+
+export const updateBillingPlanSchema = createBillingPlanSchema.partial();
+
+export const changeSubscriptionSchema = z.object({
+  planTier: billingTierEnum,
+  interval: billingIntervalEnum.default('MONTHLY'),
+  paymentProvider: paymentProviderTypeEnum.default('LOCAL_TEST'),
+});
+
+export const cancelSubscriptionSchema = z.object({
+  immediately: z.boolean().default(false),
+  reason: z.string().max(500).optional(),
+});
+
+export const recordUsageSchema = z.object({
+  organizationId: z.string().uuid(),
+  metric: usageMetricEnum,
+  quantity: z.number().int(),
+  idempotencyKey: z.string().min(8).max(256),
+  sourceType: z.string().min(2).max(100),
+  sourceId: z.string().max(100).optional(),
+  metadata: z.record(z.any()).optional(),
+});
+
+export const createUsageAdjustmentSchema = z.object({
+  metric: usageMetricEnum,
+  quantityDelta: z.number().int(),
+  reason: z.string().min(3, 'Reason must be at least 3 characters').max(500),
+});
+
+export const createCheckoutSessionSchema = z.object({
+  planTier: billingTierEnum,
+  interval: billingIntervalEnum.default('MONTHLY'),
+  provider: paymentProviderTypeEnum.default('LOCAL_TEST'),
+  successUrl: z.string().url().optional(),
+  cancelUrl: z.string().url().optional(),
+});
+
+export const configurePaymentProviderSchema = z.object({
+  provider: paymentProviderTypeEnum,
+  isEnabled: z.boolean().default(true),
+  isTestMode: z.boolean().default(true),
+  publishableKey: z.string().max(255).optional(),
+  secretKey: z.string().max(500).optional(),
+  webhookSecret: z.string().max(500).optional(),
+});
+
+export const suspendOrganizationSchema = z.object({
+  reason: z.string().min(3, 'Suspension reason is required').max(500),
+});
+
+export const suspendUserSchema = z.object({
+  reason: z.string().min(3, 'Suspension reason is required').max(500),
+});
+
+export type CreateBillingPlanSchema = z.infer<typeof createBillingPlanSchema>;
+export type UpdateBillingPlanSchema = z.infer<typeof updateBillingPlanSchema>;
+export type ChangeSubscriptionSchema = z.infer<typeof changeSubscriptionSchema>;
+export type CancelSubscriptionSchema = z.infer<typeof cancelSubscriptionSchema>;
+export type RecordUsageSchema = z.infer<typeof recordUsageSchema>;
+export type CreateUsageAdjustmentSchema = z.infer<typeof createUsageAdjustmentSchema>;
+export type CreateCheckoutSessionSchema = z.infer<typeof createCheckoutSessionSchema>;
+export type ConfigurePaymentProviderSchema = z.infer<typeof configurePaymentProviderSchema>;
+export type SuspendOrganizationSchema = z.infer<typeof suspendOrganizationSchema>;
+export type SuspendUserSchema = z.infer<typeof suspendUserSchema>;
+
+

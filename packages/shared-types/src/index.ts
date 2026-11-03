@@ -2364,3 +2364,356 @@ export interface NotificationEventPayload {
   forceBypassPreferences?: boolean;
 }
 
+// ----------------------------------------------------
+// MILESTONE 11 — BILLING & SAAS ADMINISTRATION
+// ----------------------------------------------------
+
+export enum SubscriptionStatus {
+  TRIALING = 'TRIALING',
+  ACTIVE = 'ACTIVE',
+  PAST_DUE = 'PAST_DUE',
+  PAUSED = 'PAUSED',
+  CANCELLED = 'CANCELLED',
+  EXPIRED = 'EXPIRED',
+  INCOMPLETE = 'INCOMPLETE',
+}
+
+export enum BillingInterval {
+  MONTHLY = 'MONTHLY',
+  YEARLY = 'YEARLY',
+}
+
+export enum PaymentStatus {
+  PENDING = 'PENDING',
+  SUCCEEDED = 'SUCCEEDED',
+  FAILED = 'FAILED',
+  REFUNDED = 'REFUNDED',
+  DISPUTED = 'DISPUTED',
+}
+
+export enum InvoiceStatus {
+  DRAFT = 'DRAFT',
+  OPEN = 'OPEN',
+  PAID = 'PAID',
+  VOID = 'VOID',
+  UNCOLLECTIBLE = 'UNCOLLECTIBLE',
+}
+
+export enum UsageMetric {
+  PROJECTS = 'PROJECTS',
+  MEMBERS = 'MEMBERS',
+  TEST_CASES = 'TEST_CASES',
+  TEST_RUNS_MONTHLY = 'TEST_RUNS_MONTHLY',
+  AUTOMATION_RUNS_MONTHLY = 'AUTOMATION_RUNS_MONTHLY',
+  AI_TOKENS_MONTHLY = 'AI_TOKENS_MONTHLY',
+  STORAGE_BYTES = 'STORAGE_BYTES',
+}
+
+export enum PaymentProviderType {
+  LOCAL_TEST = 'LOCAL_TEST',
+  STRIPE = 'STRIPE',
+  CHAPA = 'CHAPA',
+}
+
+export interface BillingPlanDto {
+  id: string;
+  name: string;
+  tier: BillingTier;
+  description?: string | null;
+  priceCentsMonth: number;
+  priceCentsYear: number;
+  currency: string;
+  isActive: boolean;
+  isPublic: boolean;
+  sortOrder: number;
+  maxProjects: number;
+  maxMembers: number;
+  maxTestCases: number;
+  maxTestRunsPerMonth: number;
+  maxAutomationRunsPerMonth: number;
+  aiTokenAllowance: number;
+  storageBytes: number | string;
+  storageMb?: number;
+  allowCustomReports: boolean;
+  allowIntegrations: boolean;
+  allowAdvancedAnalytics: boolean;
+  allowSso: boolean;
+  allowAuditExport: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SubscriptionDto {
+  id: string;
+  organizationId: string;
+  billingPlanId: string;
+  status: SubscriptionStatus | string;
+  billingInterval: BillingInterval | string;
+  currentPeriodStart: string;
+  currentPeriodEnd: string;
+  trialStart?: string | null;
+  trialEnd?: string | null;
+  cancelAtPeriodEnd: boolean;
+  cancelledAt?: string | null;
+  endedAt?: string | null;
+  gracePeriodEnd?: string | null;
+  paymentProvider: PaymentProviderType | string;
+  providerCustomerId?: string | null;
+  providerSubscriptionId?: string | null;
+  metadata?: Record<string, unknown> | null;
+  plan?: BillingPlanDto;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SubscriptionHistoryDto {
+  id: string;
+  subscriptionId: string;
+  organizationId: string;
+  fromStatus?: SubscriptionStatus | string | null;
+  toStatus: SubscriptionStatus | string;
+  fromPlanId?: string | null;
+  toPlanId: string;
+  reason?: string | null;
+  changedById?: string | null;
+  createdAt: string;
+}
+
+export interface UsageMeterDto {
+  metric: UsageMetric | string;
+  current: number;
+  limit: number;
+  usagePercentage: number;
+  unit: string;
+  isExceeded: boolean;
+}
+
+export interface UsageSummaryDto {
+  organizationId: string;
+  billingPeriodStart: string;
+  billingPeriodEnd: string;
+  plan: BillingPlanDto;
+  subscription: SubscriptionDto;
+  meters: Record<string, UsageMeterDto>;
+}
+
+export interface UsageLedgerEntryDto {
+  id: string;
+  organizationId: string;
+  metric: UsageMetric | string;
+  quantity: number;
+  billingPeriodStart: string;
+  billingPeriodEnd: string;
+  idempotencyKey: string;
+  sourceType: string;
+  sourceId?: string | null;
+  metadata?: Record<string, unknown> | null;
+  recordedAt: string;
+}
+
+export interface UsageAdjustmentDto {
+  id: string;
+  organizationId: string;
+  metric: UsageMetric | string;
+  quantityDelta: number;
+  reason: string;
+  adjustedById: string;
+  billingPeriodStart: string;
+  billingPeriodEnd: string;
+  createdAt: string;
+}
+
+export interface PaymentDto {
+  id: string;
+  organizationId: string;
+  invoiceId?: string | null;
+  amountCents: number;
+  currency: string;
+  status: PaymentStatus | string;
+  provider: PaymentProviderType | string;
+  providerPaymentId?: string | null;
+  isTestMode: boolean;
+  receiptUrl?: string | null;
+  errorMessage?: string | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface InvoiceDto {
+  id: string;
+  organizationId: string;
+  invoiceNumber: string;
+  status: InvoiceStatus | string;
+  subtotalCents: number;
+  taxCents: number;
+  discountCents: number;
+  totalCents: number;
+  currency: string;
+  billingPeriodStart: string;
+  billingPeriodEnd: string;
+  dueDate: string;
+  paidAt?: string | null;
+  pdfFileKey?: string | null;
+  isTestMode: boolean;
+  metadata?: Record<string, unknown> | null;
+  payments?: PaymentDto[];
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface PaymentProviderConfigDto {
+  id: string;
+  organizationId?: string | null;
+  provider: PaymentProviderType | string;
+  isEnabled: boolean;
+  isTestMode: boolean;
+  publishableKey?: string | null;
+  hasSecretKey: boolean;
+  hasWebhookSecret: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface PlatformOverviewMetricsDto {
+  totalOrganizations: number;
+  activeOrganizations: number;
+  suspendedOrganizations: number;
+  totalUsers: number;
+  activeUsers: number;
+  suspendedUsers: number;
+  subscriptionsByStatus: Record<string, number>;
+  subscriptionsByTier: Record<string, number>;
+  mrrCents: number;
+  arrCents: number;
+  recentPayments: PaymentDto[];
+  recentAuditLogs: Array<{
+    id: string;
+    action: string;
+    userId?: string | null;
+    organizationId?: string | null;
+    createdAt: string;
+    details?: unknown;
+  }>;
+}
+
+export interface PlatformOrganizationListItemDto {
+  id: string;
+  name: string;
+  slug: string;
+  logoUrl?: string | null;
+  isSuspended: boolean;
+  suspensionReason?: string | null;
+  suspendedAt?: string | null;
+  memberCount: number;
+  projectCount: number;
+  subscription?: SubscriptionDto | null;
+  createdAt: string;
+}
+
+export interface CreateBillingPlanInput {
+  name: string;
+  tier: BillingTier;
+  description?: string;
+  priceCentsMonth: number;
+  priceCentsYear: number;
+  currency?: string;
+  isActive?: boolean;
+  isPublic?: boolean;
+  sortOrder?: number;
+  maxProjects?: number;
+  maxMembers?: number;
+  maxTestCases?: number;
+  maxTestRunsPerMonth?: number;
+  maxAutomationRunsPerMonth?: number;
+  aiTokenAllowance?: number;
+  storageBytes?: number;
+  allowCustomReports?: boolean;
+  allowIntegrations?: boolean;
+  allowAdvancedAnalytics?: boolean;
+  allowSso?: boolean;
+  allowAuditExport?: boolean;
+}
+
+export interface UpdateBillingPlanInput {
+  name?: string;
+  description?: string;
+  priceCentsMonth?: number;
+  priceCentsYear?: number;
+  currency?: string;
+  isActive?: boolean;
+  isPublic?: boolean;
+  sortOrder?: number;
+  maxProjects?: number;
+  maxMembers?: number;
+  maxTestCases?: number;
+  maxTestRunsPerMonth?: number;
+  maxAutomationRunsPerMonth?: number;
+  aiTokenAllowance?: number;
+  storageBytes?: number;
+  allowCustomReports?: boolean;
+  allowIntegrations?: boolean;
+  allowAdvancedAnalytics?: boolean;
+  allowSso?: boolean;
+  allowAuditExport?: boolean;
+}
+
+export interface ChangeSubscriptionInput {
+  planTier: BillingTier;
+  interval?: BillingInterval;
+  paymentProvider?: PaymentProviderType;
+}
+
+export interface CancelSubscriptionInput {
+  immediately?: boolean;
+  reason?: string;
+}
+
+export interface RecordUsageInput {
+  organizationId: string;
+  metric: UsageMetric;
+  quantity: number;
+  idempotencyKey: string;
+  sourceType: string;
+  sourceId?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface CreateUsageAdjustmentInput {
+  metric: UsageMetric;
+  quantityDelta: number;
+  reason: string;
+}
+
+export interface CreatePaymentCheckoutInput {
+  planTier: BillingTier;
+  interval: BillingInterval;
+  provider: PaymentProviderType;
+  successUrl?: string;
+  cancelUrl?: string;
+}
+
+export interface CheckoutSessionResultDto {
+  sessionId: string;
+  checkoutUrl: string;
+  isTestMode: boolean;
+  provider: PaymentProviderType | string;
+}
+
+export interface ConfigurePaymentProviderInput {
+  provider: PaymentProviderType;
+  isEnabled?: boolean;
+  isTestMode?: boolean;
+  publishableKey?: string;
+  secretKey?: string;
+  webhookSecret?: string;
+}
+
+export interface SuspendOrganizationInput {
+  reason: string;
+}
+
+export interface SuspendUserInput {
+  reason: string;
+}
+

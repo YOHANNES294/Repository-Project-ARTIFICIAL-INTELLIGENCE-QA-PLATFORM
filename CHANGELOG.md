@@ -2,6 +2,63 @@
 
 All notable changes to the Artificial Intelligence QA Platform will be documented here.
 
+## [0.11.0] - Milestone 11 Completion: Billing & SaaS Administration
+### Added
+- **Database-Backed Plan Catalog & Subscription Lifecycle**:
+  - PostgreSQL-backed `BillingPlan` model supporting `FREE`, `STARTER`, `PROFESSIONAL`, and `ENTERPRISE` tiers with dynamic quotas and feature flags.
+  - Complete `Subscription` lifecycle state machine (`TRIALING`, `ACTIVE`, `PAST_DUE`, `PAUSED`, `CANCELLED`, `EXPIRED`, `INCOMPLETE`).
+  - Immutable state transition audit trail in `SubscriptionHistory`.
+  - Automatic trial handling, billing renewals, and cancellation workflows with period-end grace.
+- **Server-Side Entitlement Guard Engine**:
+  - Centralized entitlement service (`assertEntitlement`, `assertFeatureFlag`) and Express middleware (`requireEntitlement`, `requireFeatureFlag`).
+  - Enforces hard plan limits on projects (`PROJECTS`), members (`MEMBERS`), test cases (`TEST_CASES`), and monthly test runs (`MONTHLY_TEST_RUNS`).
+  - RFC-compliant HTTP 402 `PaymentRequiredError` (`ENTITLEMENT_LIMIT_EXCEEDED`) with current usage, quota limits, and upgrade recommendations.
+  - HTTP 403 `ForbiddenError` (`FEATURE_NOT_INCLUDED_IN_PLAN`) for gated advanced features.
+  - **Non-Destructive Customer Data Guarantee**: Downgrading plans prevents subsequent resource creation exceeding new quotas, but strictly preserves all existing customer data.
+- **Auditable Usage Metering & Immutable Ledger**:
+  - `UsageLedgerEntry` model recording atomic consumption events (`QUANTITY`, `METRIC`, `DIMENSION`).
+  - Enforces database idempotency keys to eliminate double-metering on retried background tasks or webhook re-deliveries.
+  - `UsageAdjustment` model for transparent support adjustments and credits without altering historical ledger entries.
+- **Provider-Independent Payment Architecture & AES-256-GCM Encryption**:
+  - Unified `PaymentProviderInterface` with pluggable implementations:
+    - `StripePaymentProvider`: Standard credit card checkout and webhooks.
+    - `ChapaPaymentProvider`: Multi-currency payment gateway (USD, ETB, EUR).
+    - `LocalTestPaymentProvider`: Offline deterministic payment gateway for automated testing and CI.
+  - AES-256-GCM symmetric encryption for payment provider secrets at rest (`secretKeyEncrypted`, `secretKeyIv`, `secretKeyTag`).
+  - Integer cents currency storage (`amountCents`) preventing floating-point rounding bugs.
+  - Distinct test-mode flag (`isTestMode: true`) across payment configurations, checkouts, transactions, and invoices.
+- **Secure Inbound Payment Webhooks & Replay Defense**:
+  - Raw body HMAC signature verification (`Stripe-Signature`, `X-Chapa-Signature`, `X-Signature`) preventing payload tampering.
+  - Unique delivery deduplication in `PaymentWebhookEvent` defending against webhook replay attacks.
+  - Automatic subscription status transition to `ACTIVE` upon payment confirmation.
+- **Invoices, Payments & Printable Statements**:
+  - Normalized `Invoice` and `Payment` models linked to tenant subscriptions.
+  - `generateInvoiceHtml()`: Renders responsive, printable HTML statements featuring tenant information, itemized breakdown, and prominent test-mode watermark badges.
+- **Organization Billing Workspace UI**:
+  - Built 4 responsive pages under `/settings/billing/`:
+    - `page.tsx`: Subscription overview, status card, usage progress bars, and cancellation modal.
+    - `plans/page.tsx`: Dynamic 4-tier plan comparison matrix with monthly/annual discount toggle and gateway selection.
+    - `invoices/page.tsx`: Invoice list with test-mode badges and printable HTML modal preview.
+    - `usage/page.tsx`: Detailed resource consumption meters and quota rules explanation.
+- **Platform Super Administration Portal**:
+  - Dedicated administrative workspace under `/platform/`:
+    - `page.tsx`: Executive SaaS KPI scorecard (Total Tenants, Active Subscriptions, Monthly Recurring Revenue, Annual Recurring Revenue, Total Payments).
+    - `organizations/page.tsx`: Tenant management with suspension and reactivation controls requiring mandatory audit reasons.
+    - `users/page.tsx`: Global user directory with suspension controls.
+    - `plans/page.tsx`: Dynamic plan catalog viewer and entitlement editor.
+    - `system/page.tsx`: Real-time infrastructure telemetry (database status, server uptime, Node version, memory usage).
+  - Enforced by `requireSuperAdmin` middleware: strictly denies tenant organization owners (`OrganizationRole.OWNER`) with HTTP 403 Forbidden.
+  - Suspension enforcement: Suspended users or organizations are blocked from all authenticated API endpoints with HTTP 403.
+- **Prisma Schema & Relational Models**:
+  - Added enums: `SubscriptionStatus`, `BillingInterval`, `PaymentStatus`, `InvoiceStatus`, `UsageMetric`, `PaymentProviderType`.
+  - Added models: `SubscriptionHistory`, `UsageLedgerEntry`, `UsageAdjustment`, `Payment`, `Invoice`, `PaymentProviderConfig`, `PaymentWebhookEvent`.
+  - Added suspension fields: `isSuspended`, `suspensionReason`, `suspendedAt` to `User` and `Organization`.
+- **Automated Verification**:
+  - 28 comprehensive automated unit and integration tests in `apps/api/test/billing-admin.test.ts`.
+  - Full API test suite: 20 test files passed, 203 tests passed, 0 failures (100% pass rate).
+  - Monorepo test suite: 209 tests passed across all workspace packages (`pnpm -r test`).
+  - Next.js 16 production build verified clean with exit code 0 (`next build --webpack`).
+
 ## [0.10.0] - Milestone 10 Completion: Notifications & External Integrations
 ### Added
 - **Centralized Event-Driven Notification Engine**:

@@ -8,8 +8,9 @@ import {
   updateMemberRoleSchema,
 } from '@ai-qa/validation';
 import { authenticate, requireTenant, requireRole } from '../middleware/auth.js';
+import { requireEntitlement } from '../middleware/entitlement.js';
 import { getAccessTokenCookieOptions } from '../utils/security.js';
-import { OrganizationRole, ApiResponse, UpdateAIProviderConfigInput } from '@ai-qa/shared-types';
+import { OrganizationRole, ApiResponse, UpdateAIProviderConfigInput, UsageMetric } from '@ai-qa/shared-types';
 import { updateAIProviderConfigSchema } from '@ai-qa/validation';
 import { AIGatewayService } from '../services/ai/ai-gateway.service.js';
 import { integrationRouter } from './integration.routes.js';
@@ -146,6 +147,7 @@ organizationRouter.post(
   authenticate,
   requireTenant,
   requireRole(OrganizationRole.ADMINISTRATOR),
+  requireEntitlement(UsageMetric.MEMBERS, 1),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const validated = inviteMemberSchema.parse(req.body);

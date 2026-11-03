@@ -12,6 +12,8 @@ import {
   PlayCircle,
   Bug,
   Settings,
+  CreditCard,
+  ShieldAlert,
 } from 'lucide-react';
 import { NotificationBell } from './notification-bell';
 
@@ -25,6 +27,8 @@ export function Navigation() {
     { name: 'Test Cases', href: '/test-cases', icon: CheckSquare },
     { name: 'Test Runs', href: '/test-runs', icon: PlayCircle },
     { name: 'Defects', href: '/defects', icon: Bug },
+    { name: 'Billing', href: '/settings/billing', icon: CreditCard },
+    { name: 'Platform', href: '/platform', icon: ShieldAlert },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
 
