@@ -2,6 +2,57 @@
 
 All notable changes to the Artificial Intelligence QA Platform will be documented here.
 
+## [0.5.0] - Milestone 05 Completion: Test Planning & Execution
+### Added
+- **Test Plan Management**:
+  - Domain model `TestPlan` and `TestPlanCase` with enums `TestPlanStatus` (`DRAFT`, `PLANNED`, `IN_PROGRESS`, `COMPLETED`, `ARCHIVED`) and `TestPriority`.
+  - Project-scoped identifiers (`KEY-TP-1`) generated with concurrency safety.
+  - Date validation enforcing `endDate >= startDate`.
+  - Strategy, scope, objectives, entry criteria, and exit criteria tracking.
+  - Clone/duplicate test plan functionality with optional test case preservation.
+  - Active run deletion safeguard preventing removal of test plans with linked test runs.
+  - REST endpoints under `/api/v1/projects/:projectId/test-plans`.
+- **Test Plan Case Snapshot Preservation**:
+  - Bulk and single test case assignment capturing exact immutable `TestCaseVersion` IDs.
+  - Planned vs executed counts and duplicate case assignment prevention.
+- **Test Run Management & Lifecycle**:
+  - Domain model `TestRun` and `TestRunCase` with enum `TestRunStatus` (`NOT_STARTED`, `IN_PROGRESS`, `COMPLETED`, `ABORTED`).
+  - Project-scoped identifiers (`KEY-TR-1`).
+  - Lifecycle state machine with automated `startedAt` and `completedAt` timestamp tracking.
+  - Granular tester assignment per test run case and lead tester per test run.
+  - Dynamic execution summaries: total, not run, passed, failed, blocked, skipped, pass percentage, and completion percentage.
+  - REST endpoints under `/api/v1/projects/:projectId/test-runs`.
+- **Test Execution & Retest Engine**:
+  - Domain models `TestResult` and `TestExecutionStep` with enum `ExecutionStatus` (`NOT_RUN`, `PASSED`, `FAILED`, `BLOCKED`, `SKIPPED`, `RETEST`).
+  - Step-level execution tracking with action, expected result, actual observed result, comments, and duration in ms.
+  - Backend automatic status resolution engine: any step failed -> Failed, any step blocked -> Blocked, all steps skipped -> Skipped, all steps passed -> Passed.
+  - Retest engine creating new immutable `TestResult` attempt records (`attemptNumber: 2, 3...`) preserving full chronological execution history.
+  - Atomic database transactions linking execution outcomes and transitioning run statuses.
+  - Historical deletion safeguard preventing deletion of test runs with recorded execution attempts.
+- **Defect Evidence & Attachment Service**:
+  - Multer-based multipart file uploader supporting PNG, JPEG, WebP, GIF, TXT, CSV, LOG, JSON, PDF, MP4, WebM.
+  - 10MB payload size limit and forbidden executable/script rejection (.exe, .sh, .html, .js, .bat).
+  - Cryptographically secure UUID nonce file key sanitization and project-isolated disk storage (`uploads/attachments/[projectId]/`).
+  - Authenticated streaming download endpoint (`/api/v1/projects/:projectId/attachments/:id/download`).
+- **Database-Backed Execution Analytics**:
+  - Pass rate computed strictly among executed tests: `(passed / executed) * 100` (`NOT_RUN` excluded from pass/fail denominator).
+  - Completion rate computed as `(executed / total) * 100`.
+  - Real-time breakdowns across test suites, environments, and tester workloads.
+  - Real-time recent execution activity feed.
+  - REST endpoint under `/api/v1/projects/:projectId/execution-analytics`.
+- **Frontend Next.js 16 UI**:
+  - Test Plans Overview (`/projects/[projectId]/test-plans`) with status/priority filtering, duplicate modal, and delete actions.
+  - Test Plan Builder (`/projects/[projectId]/test-plans/new`) with milestone/environment/manager selectors and date validation.
+  - Test Plan Details & Case Selector (`/projects/[projectId]/test-plans/[planId]`) with case selection modal.
+  - Test Runs Overview (`/projects/[projectId]/test-runs`) with multi-segment execution progress bars and search/filters.
+  - Test Run Creator (`/projects/[projectId]/test-runs/new`) with plan pre-population and repository case picker.
+  - Test Run Workbench (`/projects/[projectId]/test-runs/[runId]`) with status filters, tester reassignment, and analytics tab.
+  - Interactive Test Execution Runner (`/projects/[projectId]/test-runs/[runId]/execute/[runCaseId]`) with live stopwatch timer, step-by-step Pass/Fail/Block/Skip toggles, evidence attachment, failure reason notes, and historical attempt history viewer.
+  - QA Hub navigation updated on project overview page with direct links to Test Plans and Test Runs.
+- **Automated Verification**:
+  - 17 new automated unit & integration tests covering test plan creation, date validation, snapshot preservation, deletion safeguards, test run transitions, step-based status resolution, retest attempt creation, attachment validation, and analytics calculations.
+  - Total test suite expanded to 67 passing tests across 12 test suites (100% success rate).
+
 ## [0.4.0] - Milestone 04 Completion: Milestone & Test Management
 ### Added
 - **Milestone Management**:

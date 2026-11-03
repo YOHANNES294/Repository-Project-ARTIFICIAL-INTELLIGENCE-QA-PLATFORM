@@ -105,18 +105,48 @@ ARTIFICIAL INTELLIGENCE QA PLATFORM/
 - **Frontend Workbench**:
   - Milestones manager, suite folder explorer, test case repository, multi-step editor with reordering, version history viewer, and CSV import modal with real-time preview table.
 
+### Milestone 05 — Test Planning and Execution
+- **Test Plans**:
+  - Project-scoped identifiers (`KEY-TP-1`), scope, objectives, strategy, entry/exit criteria, milestone, environment, and manager associations.
+  - Date validation enforcing `endDate >= startDate`.
+  - Duplicate/clone test plans with option to carry over test cases.
+  - Active run deletion safeguard preventing removal of test plans with linked test runs.
+- **Test Plan Case Snapshots**:
+  - Bulk and single case selection linking exact immutable `TestCaseVersion` snapshots.
+  - Duplicate case prevention and dynamic planned vs executed progress tracking.
+- **Test Runs & Workbench**:
+  - Project-scoped identifiers (`KEY-TR-1`), environment targeting, lead tester assignment, lifecycle transitions (`NOT_STARTED` -> `IN_PROGRESS` -> `COMPLETED`, `ABORTED`).
+  - Automatic `startedAt` and `completedAt` timestamp tracking.
+  - Dynamic execution summaries: total, not run, passed, failed, blocked, skipped, pass percentage among executed tests, and completion percentage.
+  - Granular tester assignment per test run case.
+- **Test Execution Engine**:
+  - Step-by-step verification: action, expected result, actual observed result, comments, and duration.
+  - Backend automatic status resolution: Any step failed -> Failed; Any step blocked -> Blocked; All steps skipped -> Skipped; All steps passed -> Passed.
+  - Retest execution engine: generates new immutable `TestResult` attempt records (`attemptNumber: 2, 3...`) without overwriting previous attempts.
+  - Full execution audit trail preserving attempt history, timestamps, durations, and executing users.
+  - Historical deletion protection: runs with executed records cannot be deleted.
+- **Defect Evidence & Attachments**:
+  - Multi-MIME type validation (PNG, JPEG, WebP, GIF, TXT, CSV, LOG, JSON, PDF, MP4, WebM) and 10MB file size limit.
+  - Cryptographically secure UUID nonce file keys to prevent collisions and directory traversal attacks.
+  - Project isolation (`uploads/attachments/[projectId]/`) and authenticated streaming downloads.
+- **Database-Backed Execution Analytics**:
+  - Strict pass rate formula: `(passed / executed) * 100` (`NOT_RUN` excluded from pass/fail denominator).
+  - Completion rate formula: `(executed / total) * 100`.
+  - Real-time breakdowns across test suites, environments, and tester workloads.
+  - Execution activity feed streaming latest results.
+- **Next.js 16 UI**:
+  - Test Plans list, plan creator, plan detail with case selection modal.
+  - Test Runs list with multi-segment progress bar, search, and status filters.
+  - Test Run creation wizard with auto-import from test plans or repository cases.
+  - Test Run workbench with case list, tester reassignment, and status transition controls.
+  - Interactive step-by-step execution runner with live stopwatch timer, step status toggles, evidence upload, and historical attempt viewer.
+  - QA Hub navigation on project overview page.
+- **Verification**:
+  - 100% passing across 12 test files and 67 automated unit/integration tests.
+
 ---
 
-## 5. Upcoming Milestone Roadmap (05 — 12)
-
-### Milestone 05 — Test Planning and Execution
-- **Test Plans**: Grouping test suites and cases for targeted testing milestones with entry/exit criteria.
-- **Test Runs & Assignments**: Generating executable test runs assigned to specific environments, milestones, and testers.
-- **Execution Engine**:
-  - Step-by-step result logging (`PASSED`, `FAILED`, `BLOCKED`, `SKIPPED`, `RETEST`).
-  - Actual results, execution duration tracking, attachments, and failure notes.
-  - Complete execution traceability linking Run -> TestCaseVersion -> StepResult.
-- **Execution Workbench**: Fast, keyboard-accessible test execution runner UI for QA engineers.
+## 5. Upcoming Milestone Roadmap (06 — 12)
 
 ### Milestone 06 — Defect and Bug Tracking
 - **Defect Lifecycle**: States from `OPEN`, `TRIAGED`, `ASSIGNED`, `IN_PROGRESS`, `RESOLVED`, `CLOSED`.

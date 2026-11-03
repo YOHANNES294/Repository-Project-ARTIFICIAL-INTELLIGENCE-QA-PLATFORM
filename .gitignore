@@ -32,6 +32,10 @@ coverage/
 playwright-report/
 test-results/
 
+# Uploads and temporary assets
+uploads/
+apps/api/uploads/
+
 # Prisma
 database/prisma/dev.db
 database/prisma/dev.db-journal

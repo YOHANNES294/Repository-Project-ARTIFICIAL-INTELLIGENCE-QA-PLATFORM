@@ -19,6 +19,26 @@ import {
   TestPriority,
   TestType,
   TestCaseStatus,
+  TestPlanStatus,
+  TestRunStatus,
+  ExecutionStatus,
+  TestPlanDto,
+  TestPlanCaseDto,
+  CreateTestPlanInput,
+  UpdateTestPlanInput,
+  SelectPlanCasesInput,
+  DuplicateTestPlanInput,
+  TestRunDto,
+  TestRunCaseDto,
+  CreateTestRunInput,
+  UpdateTestRunInput,
+  TransitionRunStatusInput,
+  AssignRunCasesInput,
+  TestResultDto,
+  SubmitExecutionInput,
+  RetestExecutionInput,
+  AttachmentDto,
+  ExecutionAnalyticsDto,
 } from '@ai-qa/shared-types';
 
 export interface ProjectListParams {
@@ -496,6 +516,318 @@ export class ApiClient {
     });
     const queryString = query.toString() ? `?${query.toString()}` : '';
     return `${this.baseUrl}/projects/${projectId}/test-cases/csv/export${queryString}`;
+  }
+
+  // ----------------------------------------------------
+  // TEST PLANS (Milestone 05)
+  // ----------------------------------------------------
+  async getTestPlans(
+    projectId: string,
+    params: {
+      search?: string;
+      status?: TestPlanStatus;
+      milestoneId?: string;
+      page?: number;
+      limit?: number;
+    } = {}
+  ): Promise<{ testPlans: TestPlanDto[]; meta: any }> {
+    const query = new URLSearchParams();
+    if (params.search) query.set('search', params.search);
+    if (params.status) query.set('status', params.status);
+    if (params.milestoneId) query.set('milestoneId', params.milestoneId);
+    if (params.page) query.set('page', String(params.page));
+    if (params.limit) query.set('limit', String(params.limit));
+
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    return this.request<{ testPlans: TestPlanDto[]; meta: any }>(
+      `/projects/${projectId}/test-plans${queryString}`
+    );
+  }
+
+  async getTestPlan(projectId: string, planId: string): Promise<TestPlanDto> {
+    return this.request<TestPlanDto>(`/projects/${projectId}/test-plans/${planId}`);
+  }
+
+  async createTestPlan(projectId: string, payload: CreateTestPlanInput): Promise<TestPlanDto> {
+    return this.request<TestPlanDto>(`/projects/${projectId}/test-plans`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateTestPlan(
+    projectId: string,
+    planId: string,
+    payload: UpdateTestPlanInput
+  ): Promise<TestPlanDto> {
+    return this.request<TestPlanDto>(`/projects/${projectId}/test-plans/${planId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteTestPlan(projectId: string, planId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/projects/${projectId}/test-plans/${planId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async duplicateTestPlan(
+    projectId: string,
+    planId: string,
+    payload: DuplicateTestPlanInput
+  ): Promise<TestPlanDto> {
+    return this.request<TestPlanDto>(`/projects/${projectId}/test-plans/${planId}/duplicate`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async getPlanCases(
+    projectId: string,
+    planId: string
+  ): Promise<{ planCases: TestPlanCaseDto[]; totalCount: number }> {
+    return this.request<{ planCases: TestPlanCaseDto[]; totalCount: number }>(
+      `/projects/${projectId}/test-plans/${planId}/cases`
+    );
+  }
+
+  async selectPlanCases(
+    projectId: string,
+    planId: string,
+    payload: SelectPlanCasesInput
+  ): Promise<{ addedCount: number; planCases: TestPlanCaseDto[] }> {
+    return this.request<{ addedCount: number; planCases: TestPlanCaseDto[] }>(
+      `/projects/${projectId}/test-plans/${planId}/cases`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }
+    );
+  }
+
+  async removePlanCase(
+    projectId: string,
+    planId: string,
+    caseId: string
+  ): Promise<{ message: string }> {
+    return this.request<{ message: string }>(
+      `/projects/${projectId}/test-plans/${planId}/cases/${caseId}`,
+      {
+        method: 'DELETE',
+      }
+    );
+  }
+
+  // ----------------------------------------------------
+  // TEST RUNS (Milestone 05)
+  // ----------------------------------------------------
+  async getTestRuns(
+    projectId: string,
+    params: {
+      search?: string;
+      status?: TestRunStatus;
+      testPlanId?: string;
+      milestoneId?: string;
+      environmentId?: string;
+      assignedToId?: string;
+      page?: number;
+      limit?: number;
+    } = {}
+  ): Promise<{ testRuns: TestRunDto[]; meta: any }> {
+    const query = new URLSearchParams();
+    if (params.search) query.set('search', params.search);
+    if (params.status) query.set('status', params.status);
+    if (params.testPlanId) query.set('testPlanId', params.testPlanId);
+    if (params.milestoneId) query.set('milestoneId', params.milestoneId);
+    if (params.environmentId) query.set('environmentId', params.environmentId);
+    if (params.assignedToId) query.set('assignedToId', params.assignedToId);
+    if (params.page) query.set('page', String(params.page));
+    if (params.limit) query.set('limit', String(params.limit));
+
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    return this.request<{ testRuns: TestRunDto[]; meta: any }>(
+      `/projects/${projectId}/test-runs${queryString}`
+    );
+  }
+
+  async getTestRun(projectId: string, runId: string): Promise<TestRunDto> {
+    return this.request<TestRunDto>(`/projects/${projectId}/test-runs/${runId}`);
+  }
+
+  async createTestRun(projectId: string, payload: CreateTestRunInput): Promise<TestRunDto> {
+    return this.request<TestRunDto>(`/projects/${projectId}/test-runs`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateTestRun(
+    projectId: string,
+    runId: string,
+    payload: UpdateTestRunInput
+  ): Promise<TestRunDto> {
+    return this.request<TestRunDto>(`/projects/${projectId}/test-runs/${runId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteTestRun(projectId: string, runId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/projects/${projectId}/test-runs/${runId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async transitionRunStatus(
+    projectId: string,
+    runId: string,
+    payload: TransitionRunStatusInput
+  ): Promise<TestRunDto> {
+    return this.request<TestRunDto>(`/projects/${projectId}/test-runs/${runId}/status`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async getRunCases(
+    projectId: string,
+    runId: string,
+    params: {
+      status?: ExecutionStatus;
+      assignedToId?: string;
+      search?: string;
+    } = {}
+  ): Promise<{ runCases: TestRunCaseDto[]; summary: any }> {
+    const query = new URLSearchParams();
+    if (params.status) query.set('status', params.status);
+    if (params.assignedToId) query.set('assignedToId', params.assignedToId);
+    if (params.search) query.set('search', params.search);
+
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    return this.request<{ runCases: TestRunCaseDto[]; summary: any }>(
+      `/projects/${projectId}/test-runs/${runId}/cases${queryString}`
+    );
+  }
+
+  async assignRunCases(
+    projectId: string,
+    runId: string,
+    payload: AssignRunCasesInput
+  ): Promise<{ assignedCount: number }> {
+    return this.request<{ assignedCount: number }>(
+      `/projects/${projectId}/test-runs/${runId}/assign`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }
+    );
+  }
+
+  // ----------------------------------------------------
+  // TEST EXECUTION WORKBENCH (Milestone 05)
+  // ----------------------------------------------------
+  async getTestRunCase(
+    projectId: string,
+    runId: string,
+    runCaseId: string
+  ): Promise<TestRunCaseDto> {
+    return this.request<TestRunCaseDto>(
+      `/projects/${projectId}/test-runs/${runId}/cases/${runCaseId}`
+    );
+  }
+
+  async submitExecution(
+    projectId: string,
+    runId: string,
+    runCaseId: string,
+    payload: SubmitExecutionInput
+  ): Promise<TestResultDto> {
+    return this.request<TestResultDto>(
+      `/projects/${projectId}/test-runs/${runId}/cases/${runCaseId}/execute`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }
+    );
+  }
+
+  async retestExecution(
+    projectId: string,
+    runId: string,
+    runCaseId: string,
+    payload: RetestExecutionInput
+  ): Promise<TestResultDto> {
+    return this.request<TestResultDto>(
+      `/projects/${projectId}/test-runs/${runId}/cases/${runCaseId}/retest`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }
+    );
+  }
+
+  async getExecutionHistory(
+    projectId: string,
+    runId: string,
+    runCaseId: string
+  ): Promise<TestResultDto[]> {
+    return this.request<TestResultDto[]>(
+      `/projects/${projectId}/test-runs/${runId}/cases/${runCaseId}/history`
+    );
+  }
+
+  // ----------------------------------------------------
+  // ATTACHMENTS & EVIDENCE (Milestone 05)
+  // ----------------------------------------------------
+  async uploadAttachment(
+    projectId: string,
+    formData: FormData,
+    testResultId?: string
+  ): Promise<AttachmentDto> {
+    const url = testResultId
+      ? `${this.baseUrl}/projects/${projectId}/attachments?testResultId=${testResultId}`
+      : `${this.baseUrl}/projects/${projectId}/attachments`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
+    });
+
+    const json = await response.json();
+    if (!response.ok) {
+      throw new Error(json.error?.message || 'Attachment upload failed');
+    }
+    return json.data;
+  }
+
+  getAttachmentDownloadUrl(projectId: string, attachmentId: string): string {
+    return `${this.baseUrl}/projects/${projectId}/attachments/${attachmentId}/download`;
+  }
+
+  // ----------------------------------------------------
+  // EXECUTION ANALYTICS (Milestone 05)
+  // ----------------------------------------------------
+  async getExecutionAnalytics(
+    projectId: string,
+    params: {
+      testRunId?: string;
+      testPlanId?: string;
+      milestoneId?: string;
+      environmentId?: string;
+    } = {}
+  ): Promise<ExecutionAnalyticsDto> {
+    const query = new URLSearchParams();
+    if (params.testRunId) query.set('testRunId', params.testRunId);
+    if (params.testPlanId) query.set('testPlanId', params.testPlanId);
+    if (params.milestoneId) query.set('milestoneId', params.milestoneId);
+    if (params.environmentId) query.set('environmentId', params.environmentId);
+
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    return this.request<ExecutionAnalyticsDto>(
+      `/projects/${projectId}/execution-analytics${queryString}`
+    );
   }
 }
 

@@ -213,3 +213,57 @@ Retrieves chronological audit log entries for project modifications.
 - `POST /api/v1/projects/:projectId/test-cases/csv/preview`: Parses uploaded RFC 4180 CSV text and returns validation report (`totalRows`, `validRows`, `invalidRows`, and row-by-row error diagnostics) prior to importing.
 - `POST /api/v1/projects/:projectId/test-cases/csv/import`: Bulk imports valid rows inside a database transaction, auto-generating sequential keys, creating suites/tags, versions, and steps.
 - `GET /api/v1/projects/:projectId/test-cases/csv/export`: Streams RFC 4180 CSV file filtered by query parameters. **Formula Injection Sanitization**: Prepends single quote `'` to any cell beginning with `=`, `+`, `-`, `@`, `\t`, or `\r`.
+
+---
+
+## 7. Milestone 05 — Test Planning & Execution APIs
+
+Base route: `/api/v1/projects/:projectId`
+
+### 7.1 Test Plans (`/test-plans`)
+
+- `GET /test-plans`: List test plans with filtering (`status`, `priority`, `milestoneId`, `search`), sorting, and pagination.
+- `POST /test-plans`: Create a test plan with project-scoped key (`KEY-TP-1`), dates validation (`endDate >= startDate`), priority, scope, strategy, and entry/exit criteria.
+- `GET /test-plans/:planId`: Get test plan details including linked milestone, environment, manager, and selected test case version snapshots.
+- `PATCH /test-plans/:planId`: Update test plan properties.
+- `POST /test-plans/:planId/duplicate`: Clone test plan and optionally duplicate selected test cases.
+- `DELETE /test-plans/:planId`: Delete test plan. Blocked if any active test runs are linked to this plan.
+- `POST /test-plans/:planId/cases`: Add test cases in bulk or individually. Stores the exact immutable `testCaseVersionId` snapshot.
+- `DELETE /test-plans/:planId/cases/:caseId`: Remove test case from test plan.
+
+### 7.2 Test Runs (`/test-runs`)
+
+- `GET /test-runs`: List test runs with filtering (`status`, `milestoneId`, `environmentId`, `assignedToId`, `search`). Returns dynamic execution summaries.
+- `POST /test-runs`: Create a test run with project-scoped key (`KEY-TR-1`). Automatically populates test cases if created from a test plan or specific suites.
+- `GET /test-runs/:runId`: Get test run details, linked cases, assigned testers, latest execution attempts, and dynamic execution summary.
+- `PATCH /test-runs/:runId`: Update run metadata, milestone, environment, or lead tester.
+- `POST /test-runs/:runId/status`: Transition run status (`NOT_STARTED` -> `IN_PROGRESS` -> `COMPLETED`, `ABORTED`). Automatically tracks `startedAt` and `completedAt`.
+- `POST /test-runs/:runId/cases/assign`: Assign or reassign lead testers to specific run cases.
+- `DELETE /test-runs/:runId`: Delete test run. Historical deletion safeguard: Blocked with HTTP 400 if any execution results exist.
+
+### 7.3 Test Execution & Retest (`/test-runs/:runId/cases/:runCaseId`)
+
+- `GET /test-runs/:runId/cases/:runCaseId`: Fetch run case details, steps from version snapshot, and latest execution result.
+- `POST /test-runs/:runId/cases/:runCaseId/execute`: Submit test execution attempt #1. Step execution engine calculates overall status:
+  - Any step `FAILED` -> Overall status `FAILED`.
+  - Any step `BLOCKED` -> Overall status `BLOCKED`.
+  - All steps `SKIPPED` -> Overall status `SKIPPED`.
+  - All steps `PASSED` -> Overall status `PASSED`.
+  - Auto-starts test run to `IN_PROGRESS` if currently `NOT_STARTED`.
+- `POST /test-runs/:runId/cases/:runCaseId/retest`: Submit a retest attempt (`attemptNumber: 2, 3...`). Creates a new immutable `TestResult` record preserving previous attempts and history.
+- `GET /test-runs/:runId/cases/:runCaseId/history`: Retrieve full chronological audit trail of all execution attempts for this run case.
+
+### 7.4 Attachments & Defect Evidence (`/attachments`)
+
+- `POST /attachments`: Upload defect evidence, logs, or screenshots (multipart/form-data). Validates MIME types (PNG, JPEG, WebP, GIF, TXT, CSV, LOG, JSON, PDF, MP4, WebM) and strictly enforces 10MB size limit. Saves with random UUID nonce keys to prevent traversal/collision.
+- `GET /attachments/:attachmentId/download`: Stream authenticated attachment with safe content disposition.
+
+### 7.5 Execution Analytics (`/execution-analytics`)
+
+- `GET /execution-analytics`: Computes quality metrics across executed tests:
+  - Pass rate strictly among executed tests: `(passed / executed) * 100` (`NOT_RUN` is never counted as passed/failed).
+  - Completion rate: `(executed / total) * 100`.
+  - Suite-level pass/fail breakdown.
+  - Environment-level execution breakdown.
+  - Tester workload and execution breakdown.
+  - Recent real-time execution activity stream.

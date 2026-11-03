@@ -28,6 +28,8 @@ import {
   FolderTree,
   Milestone,
   ArrowRight,
+  ClipboardList,
+  PlayCircle,
 } from 'lucide-react';
 
 export default function ProjectDetailPage() {
@@ -327,7 +329,7 @@ export default function ProjectDetailPage() {
               </div>
 
               {/* QA Hub Quick Actions */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <Link
                   href={`/projects/${projectId}/test-cases`}
                   className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:border-blue-500 hover:shadow-md transition-all group"
@@ -362,17 +364,49 @@ export default function ProjectDetailPage() {
 
                 <Link
                   href={`/projects/${projectId}/milestones`}
-                  className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:border-emerald-500 hover:shadow-md transition-all group"
+                  className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:border-amber-500 hover:shadow-md transition-all group"
                 >
-                  <div className="p-2.5 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 w-fit mb-3 group-hover:scale-105 transition-transform">
+                  <div className="p-2.5 rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 w-fit mb-3 group-hover:scale-105 transition-transform">
                     <Milestone className="h-5 w-5" />
                   </div>
                   <h4 className="font-bold text-slate-900 dark:text-white text-sm flex items-center justify-between">
                     Milestones
-                    <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-emerald-600 transition-colors" />
+                    <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-amber-600 transition-colors" />
                   </h4>
                   <p className="text-xs text-slate-500 mt-1">
                     Sprint tracking, release dates & QA progress
+                  </p>
+                </Link>
+
+                <Link
+                  href={`/projects/${projectId}/test-plans`}
+                  className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:border-teal-500 hover:shadow-md transition-all group"
+                >
+                  <div className="p-2.5 rounded-lg bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300 w-fit mb-3 group-hover:scale-105 transition-transform">
+                    <ClipboardList className="h-5 w-5" />
+                  </div>
+                  <h4 className="font-bold text-slate-900 dark:text-white text-sm flex items-center justify-between">
+                    Test Plans
+                    <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-teal-600 transition-colors" />
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Scope, strategy, criteria & case snapshots
+                  </p>
+                </Link>
+
+                <Link
+                  href={`/projects/${projectId}/test-runs`}
+                  className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:border-emerald-500 hover:shadow-md transition-all group"
+                >
+                  <div className="p-2.5 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 w-fit mb-3 group-hover:scale-105 transition-transform">
+                    <PlayCircle className="h-5 w-5" />
+                  </div>
+                  <h4 className="font-bold text-slate-900 dark:text-white text-sm flex items-center justify-between">
+                    Test Runs & Execution
+                    <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-emerald-600 transition-colors" />
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Workbenches, live runners, retests & metrics
                   </p>
                 </Link>
               </div>

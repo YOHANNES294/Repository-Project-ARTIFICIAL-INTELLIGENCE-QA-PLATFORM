@@ -317,6 +317,130 @@ export const csvBulkImportSchema = z.object({
   defaultMilestoneId: z.string().uuid().optional().nullable(),
 });
 
+// ----------------------------------------------------
+// MILESTONE 05: TEST PLANNING & EXECUTION SCHEMAS
+// ----------------------------------------------------
+
+export const createTestPlanSchema = z
+  .object({
+    name: z.string().min(3, 'Test plan name must be at least 3 characters').max(200).trim(),
+    description: z.string().max(5000).optional().nullable(),
+    objectives: z.string().max(3000).optional().nullable(),
+    scope: z.string().max(3000).optional().nullable(),
+    strategy: z.string().max(3000).optional().nullable(),
+    status: z.enum(['DRAFT', 'PLANNED', 'IN_PROGRESS', 'COMPLETED', 'ARCHIVED']).default('DRAFT'),
+    priority: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']).default('MEDIUM'),
+    milestoneId: z.string().uuid('Invalid milestone ID').optional().nullable(),
+    environmentId: z.string().uuid('Invalid environment ID').optional().nullable(),
+    managerId: z.string().uuid('Invalid manager ID').optional().nullable(),
+    entryCriteria: z.string().max(2000).optional().nullable(),
+    exitCriteria: z.string().max(2000).optional().nullable(),
+    startDate: z.string().datetime().optional().nullable(),
+    endDate: z.string().datetime().optional().nullable(),
+  })
+  .refine(
+    (data) => {
+      if (data.startDate && data.endDate) {
+        return new Date(data.endDate) >= new Date(data.startDate);
+      }
+      return true;
+    },
+    {
+      message: 'End date must be greater than or equal to start date',
+      path: ['endDate'],
+    }
+  );
+
+export const updateTestPlanSchema = z
+  .object({
+    name: z.string().min(3, 'Test plan name must be at least 3 characters').max(200).trim().optional(),
+    description: z.string().max(5000).optional().nullable(),
+    objectives: z.string().max(3000).optional().nullable(),
+    scope: z.string().max(3000).optional().nullable(),
+    strategy: z.string().max(3000).optional().nullable(),
+    status: z.enum(['DRAFT', 'PLANNED', 'IN_PROGRESS', 'COMPLETED', 'ARCHIVED']).optional(),
+    priority: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']).optional(),
+    milestoneId: z.string().uuid('Invalid milestone ID').optional().nullable(),
+    environmentId: z.string().uuid('Invalid environment ID').optional().nullable(),
+    managerId: z.string().uuid('Invalid manager ID').optional().nullable(),
+    entryCriteria: z.string().max(2000).optional().nullable(),
+    exitCriteria: z.string().max(2000).optional().nullable(),
+    startDate: z.string().datetime().optional().nullable(),
+    endDate: z.string().datetime().optional().nullable(),
+  })
+  .refine(
+    (data) => {
+      if (data.startDate && data.endDate) {
+        return new Date(data.endDate) >= new Date(data.startDate);
+      }
+      return true;
+    },
+    {
+      message: 'End date must be greater than or equal to start date',
+      path: ['endDate'],
+    }
+  );
+
+export const selectPlanCasesSchema = z.object({
+  testCaseIds: z.array(z.string().uuid('Invalid test case ID')).min(1, 'Select at least one test case'),
+});
+
+export const duplicateTestPlanSchema = z.object({
+  name: z.string().min(3, 'Name is required').max(200).trim(),
+  includeCases: z.boolean().default(true),
+});
+
+export const createTestRunSchema = z.object({
+  name: z.string().min(3, 'Test run name must be at least 3 characters').max(200).trim(),
+  description: z.string().max(5000).optional().nullable(),
+  testPlanId: z.string().uuid('Invalid test plan ID').optional().nullable(),
+  milestoneId: z.string().uuid('Invalid milestone ID').optional().nullable(),
+  environmentId: z.string().uuid('Invalid environment ID').optional().nullable(),
+  assignedToId: z.string().uuid('Invalid assignee ID').optional().nullable(),
+  testCaseIds: z.array(z.string().uuid()).default([]),
+  testSuiteIds: z.array(z.string().uuid()).default([]),
+  isAutomated: z.boolean().default(false),
+});
+
+export const updateTestRunSchema = z.object({
+  name: z.string().min(3, 'Test run name must be at least 3 characters').max(200).trim().optional(),
+  description: z.string().max(5000).optional().nullable(),
+  milestoneId: z.string().uuid('Invalid milestone ID').optional().nullable(),
+  environmentId: z.string().uuid('Invalid environment ID').optional().nullable(),
+  assignedToId: z.string().uuid('Invalid assignee ID').optional().nullable(),
+});
+
+export const transitionRunStatusSchema = z.object({
+  status: z.enum(['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'ABORTED']),
+});
+
+export const assignRunCasesSchema = z.object({
+  testRunCaseIds: z.array(z.string().uuid('Invalid test run case ID')).min(1, 'At least one case required'),
+  assignedToId: z.string().uuid('Invalid assignee ID').optional().nullable(),
+});
+
+export const stepExecutionSchema = z.object({
+  stepNumber: z.number().int().positive(),
+  status: z.enum(['NOT_RUN', 'PASSED', 'FAILED', 'BLOCKED', 'SKIPPED', 'RETEST']),
+  actualResult: z.string().max(3000).optional().nullable(),
+  comment: z.string().max(2000).optional().nullable(),
+  durationMs: z.number().int().min(0).optional().nullable(),
+});
+
+export const submitExecutionSchema = z.object({
+  status: z.enum(['NOT_RUN', 'PASSED', 'FAILED', 'BLOCKED', 'SKIPPED', 'RETEST']).optional(),
+  actualResult: z.string().max(5000).optional().nullable(),
+  comment: z.string().max(3000).optional().nullable(),
+  failureReason: z.string().max(2000).optional().nullable(),
+  durationMs: z.number().int().min(0).optional().nullable(),
+  stepResults: z.array(stepExecutionSchema).optional(),
+  attachmentIds: z.array(z.string().uuid('Invalid attachment ID')).optional(),
+});
+
+export const retestExecutionSchema = submitExecutionSchema.extend({
+  retestNotes: z.string().max(2000).optional().nullable(),
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;

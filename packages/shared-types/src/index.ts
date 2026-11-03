@@ -40,6 +40,23 @@ export enum TestCaseStatus {
   DEPRECATED = 'DEPRECATED',
 }
 
+// Test Plan Status
+export enum TestPlanStatus {
+  DRAFT = 'DRAFT',
+  PLANNED = 'PLANNED',
+  IN_PROGRESS = 'IN_PROGRESS',
+  COMPLETED = 'COMPLETED',
+  ARCHIVED = 'ARCHIVED',
+}
+
+// Test Run Status
+export enum TestRunStatus {
+  NOT_STARTED = 'NOT_STARTED',
+  IN_PROGRESS = 'IN_PROGRESS',
+  COMPLETED = 'COMPLETED',
+  ABORTED = 'ABORTED',
+}
+
 // Test Types
 export enum TestType {
   FUNCTIONAL = 'FUNCTIONAL',
@@ -135,6 +152,7 @@ export interface ApiResponse<T = unknown> {
     limit?: number;
     total?: number;
     totalPages?: number;
+    [key: string]: any;
   };
 }
 
@@ -396,5 +414,347 @@ export interface CsvBulkImportInput {
   rows: CsvImportRowData[];
   defaultSuiteId?: string | null;
   defaultMilestoneId?: string | null;
+}
+
+// ----------------------------------------------------
+// MILESTONE 05: TEST PLANNING & EXECUTION DTOS
+// ----------------------------------------------------
+
+export interface TestPlanDto {
+  id: string;
+  projectId: string;
+  planNumber: number;
+  key?: string; // e.g. "CORE-TP-1"
+  milestoneId: string | null;
+  environmentId: string | null;
+  managerId: string | null;
+  name: string;
+  description: string | null;
+  objectives: string | null;
+  scope: string | null;
+  strategy: string | null;
+  status: TestPlanStatus;
+  priority: TestPriority;
+  entryCriteria: string | null;
+  exitCriteria: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+  milestone?: {
+    id: string;
+    name: string;
+  } | null;
+  environment?: {
+    id: string;
+    name: string;
+  } | null;
+  manager?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+  _count?: {
+    selectedCases: number;
+    testRuns: number;
+  };
+  selectedCases?: TestPlanCaseDto[];
+}
+
+export interface TestPlanCaseDto {
+  id: string;
+  testPlanId: string;
+  testCaseId: string;
+  testCaseVersionId: string | null;
+  createdAt: string;
+  testCase?: TestCaseDto;
+  testCaseVersion?: TestCaseVersionDto | null;
+}
+
+export interface CreateTestPlanInput {
+  name: string;
+  description?: string | null;
+  objectives?: string | null;
+  scope?: string | null;
+  strategy?: string | null;
+  status?: TestPlanStatus | any;
+  priority?: TestPriority | any;
+  milestoneId?: string | null;
+  environmentId?: string | null;
+  managerId?: string | null;
+  entryCriteria?: string | null;
+  exitCriteria?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+}
+
+export interface UpdateTestPlanInput {
+  name?: string;
+  description?: string | null;
+  objectives?: string | null;
+  scope?: string | null;
+  strategy?: string | null;
+  status?: TestPlanStatus | any;
+  priority?: TestPriority | any;
+  milestoneId?: string | null;
+  environmentId?: string | null;
+  managerId?: string | null;
+  entryCriteria?: string | null;
+  exitCriteria?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+}
+
+export interface SelectPlanCasesInput {
+  testCaseIds: string[];
+}
+
+export interface DuplicateTestPlanInput {
+  name: string;
+  includeCases?: boolean;
+}
+
+export interface ExecutionSummaryDto {
+  total: number;
+  notRun: number;
+  passed: number;
+  failed: number;
+  blocked: number;
+  skipped: number;
+  passPercentage: number;
+  completionPercentage: number;
+}
+
+export interface TestRunDto {
+  id: string;
+  projectId: string;
+  runNumber: number;
+  key?: string; // e.g. "CORE-TR-1"
+  testPlanId: string | null;
+  milestoneId: string | null;
+  environmentId: string | null;
+  assignedToId: string | null;
+  createdById: string | null;
+  name: string;
+  description: string | null;
+  status: TestRunStatus;
+  isAutomated: boolean;
+  startedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  testPlan?: {
+    id: string;
+    name: string;
+  } | null;
+  milestone?: {
+    id: string;
+    name: string;
+  } | null;
+  environment?: {
+    id: string;
+    name: string;
+  } | null;
+  assignedTo?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+  createdBy?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+  summary?: ExecutionSummaryDto;
+  cases?: TestRunCaseDto[];
+  _count?: {
+    cases: number;
+  };
+}
+
+export interface CreateTestRunInput {
+  name: string;
+  description?: string | null;
+  testPlanId?: string | null;
+  milestoneId?: string | null;
+  environmentId?: string | null;
+  assignedToId?: string | null;
+  testCaseIds?: string[];
+  testSuiteIds?: string[];
+  isAutomated?: boolean;
+}
+
+export interface UpdateTestRunInput {
+  name?: string;
+  description?: string | null;
+  milestoneId?: string | null;
+  environmentId?: string | null;
+  assignedToId?: string | null;
+}
+
+export interface TransitionRunStatusInput {
+  status: TestRunStatus;
+}
+
+export interface AssignRunCasesInput {
+  testRunCaseIds: string[];
+  assignedToId?: string | null;
+}
+
+export interface AttachmentDto {
+  id: string;
+  projectId?: string | null;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  fileUrl: string;
+  storageKey?: string | null;
+  uploadedById?: string | null;
+  testResultId?: string | null;
+  defectId?: string | null;
+  createdAt: string;
+  uploadedBy?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+}
+
+export interface TestExecutionStepDto {
+  id: string;
+  testResultId: string;
+  stepNumber: number;
+  status: ExecutionStatus | any;
+  actualResult: string | null;
+  comment: string | null;
+  durationMs: number | null;
+}
+
+export interface TestResultDto {
+  id: string;
+  testRunCaseId: string;
+  executedById: string | null;
+  attemptNumber: number;
+  status: ExecutionStatus | any;
+  actualResult: string | null;
+  comment: string | null;
+  failureReason: string | null;
+  durationMs: number | null;
+  executedAt: string;
+  executedBy?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+  stepResults: TestExecutionStepDto[];
+  attachments: AttachmentDto[];
+}
+
+export interface TestRunCaseDto {
+  id: string;
+  testRunId: string;
+  testCaseVersionId: string;
+  assignedToId: string | null;
+  status: ExecutionStatus | any;
+  orderIndex: number;
+  updatedAt: string;
+  testRun?: {
+    id: string;
+    name: string;
+    key?: string;
+  };
+  assignedTo?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+  testCaseVersion: TestCaseVersionDto & {
+    testCase?: {
+      id: string;
+      caseNumber: number;
+      key?: string;
+      title: string;
+      suiteId?: string | null;
+      suite?: { id: string; name: string } | null;
+    };
+  };
+  results?: TestResultDto[];
+  latestResult?: TestResultDto | null;
+}
+
+export interface StepExecutionInput {
+  stepNumber: number;
+  status: ExecutionStatus | any;
+  actualResult?: string | null;
+  comment?: string | null;
+  durationMs?: number | null;
+}
+
+export interface SubmitExecutionInput {
+  status?: ExecutionStatus | any; // optional: if not provided, backend calculates based on steps!
+  actualResult?: string | null;
+  comment?: string | null;
+  failureReason?: string | null;
+  durationMs?: number | null;
+  stepResults?: StepExecutionInput[];
+  attachmentIds?: string[];
+}
+
+export interface RetestExecutionInput extends SubmitExecutionInput {
+  retestNotes?: string | null;
+}
+
+export interface ExecutionAnalyticsDto {
+  totalCases: number;
+  notRun: number;
+  passed: number;
+  failed: number;
+  blocked: number;
+  skipped: number;
+  passPercentage: number;
+  completionPercentage: number;
+  bySuite: Array<{
+    suiteId: string;
+    suiteName: string;
+    total: number;
+    passed: number;
+    failed: number;
+    blocked: number;
+    skipped: number;
+    notRun: number;
+  }>;
+  byEnvironment: Array<{
+    environmentId: string;
+    environmentName: string;
+    total: number;
+    passed: number;
+    failed: number;
+    notRun: number;
+  }>;
+  byTester: Array<{
+    testerId: string;
+    testerName: string;
+    assignedCount: number;
+    executedCount: number;
+    passedCount: number;
+    failedCount: number;
+  }>;
+  recentActivity: Array<{
+    id: string;
+    testRunId: string;
+    testRunName: string;
+    testCaseTitle: string;
+    status: ExecutionStatus;
+    attemptNumber: number;
+    executedAt: string;
+    testerName: string;
+    durationMs: number | null;
+  }>;
 }
 

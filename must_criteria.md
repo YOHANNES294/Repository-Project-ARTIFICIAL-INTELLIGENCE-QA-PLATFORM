@@ -65,12 +65,17 @@ Status Legend:
 ---
 
 ## Milestone 05 — Test Planning and Execution
-- [ ] Test Plans with entry/exit criteria, scope, and test suite assignments
-- [ ] Test Runs generation & tester assignment
-- [ ] Test execution engine (Step-level results, actual results, duration, attachments, notes)
-- [ ] Execution statuses (Not Run, Passed, Failed, Blocked, Skipped, Retest)
-- [ ] Full traceability: Milestone -> Test Plan -> TestCaseVersion -> Test Run -> Execution -> Defect
-- [ ] Frontend execution workbench with real-time state recording
+- [x] Test Plans with project-scoped keys (`KEY-TP-1`), entry/exit criteria, scope, strategy, milestone/environment/manager links, date validation (`endDate >= startDate`), duplicate cloning, and deletion protection
+- [x] Test Plan Test Case selection with exact immutable snapshot preservation (`testCaseVersionId`), bulk & single assignment, duplicate prevention
+- [x] Test Runs generation with project-scoped keys (`KEY-TR-1`), environment assignment, lead tester assignment, lifecycle transitions (`NOT_STARTED` -> `IN_PROGRESS` -> `COMPLETED`, `ABORTED`), timestamps (`startedAt`, `completedAt`), dynamic summary calculation
+- [x] Test execution engine (Step-level results with action/expected/actual/status, duration tracking in ms, execution notes, failure reason)
+- [x] Step-based status resolution engine (any failed -> failed, any blocked -> blocked, all skipped -> skipped, all passed -> passed)
+- [x] Historical execution attempt tracking (Attempt #1, #2, #3...) with retest mode preserving prior attempts and full audit history
+- [x] Historical deletion safeguard: prevents deleting runs with execution records to preserve auditability
+- [x] Defect evidence and attachment service: MIME type validation, 10MB size limit, UUID nonce filename sanitization, project isolation, authenticated streaming downloads
+- [x] Database-backed execution analytics: pass rate calculated strictly among executed tests (`NOT_RUN` excluded from pass/fail denominator), completion rate, breakdowns by suite, environment, tester, and real-time activity feed
+- [x] Frontend Next.js 16 UI: Test Plans overview & builder, plan case drawer, Test Runs overview, run creator, run workbench with dynamic multi-segment progress bar, interactive step runner with live timer, and analytics dashboard
+- [x] Automated integration test suite: 100% passing across 12 test files and 67 tests
 
 ---
 

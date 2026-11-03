@@ -46,3 +46,18 @@
 - **Timing-Attack Protection**: Password reset requests do not disclose whether an email address exists in the system.
 - **Audit Logging**: All authentication, organization, project, member, environment, milestone, test suite, and test case operations create structured entries in `AuditLog`.
 - **HTTP Security Headers**: Powered by `helmet`, including CSP, HSTS, frame protection, and content type sniffing prevention.
+
+---
+
+## 7. Milestone 05 — Test Planning & Execution Security
+
+- **Execution Result Immutability**: `TestResult` records and their child `TestExecutionStep` records are append-only. Once an attempt is submitted, it is never modified or overwritten. Retests increment `attemptNumber` (`attemptNumber = 2, 3...`) in an explicit audit trail.
+- **Historical Safeguards Against Data Deletion**: Test runs that have logged test executions cannot be hard deleted. Attempting to delete a run with execution records is rejected with HTTP 400 to prevent destruction of compliance records and QA audit trails.
+- **Strict Evidence File Upload Controls**:
+  - **MIME Type Allowlist**: Restricted strictly to safe formats: `image/png`, `image/jpeg`, `image/webp`, `image/gif`, `text/plain`, `text/csv`, `text/x-log`, `application/json`, `application/pdf`, `video/mp4`, `video/webm`.
+  - **File Type Rejections**: Executable binaries (`.exe`, `.sh`, `.bat`, `.cmd`, `.dll`, `.com`, `.ps1`) and dangerous web scripts (`.html`, `.svg`, `.js`) are strictly rejected.
+  - **Payload Size Enforcement**: Enforces a strict 10MB limit per file on multer and API layers.
+  - **Nonce File Key Sanitization**: Uploaded files are stripped of path traversal characters (`..`, `/`, `\`) and stored with a cryptographically secure UUID nonce (`${uuidv4()}-${sanitizedFileName}`) in project-isolated directories (`uploads/attachments/[projectId]/`).
+  - **Authenticated Streaming Downloads**: Files are not publicly exposed via open static directories. Download endpoints verify the user's organization and project membership before streaming the file.
+- **Atomic Transaction Isolation**: Submitting an execution atomically creates the `TestResult`, persists step outcomes, updates the `TestRunCase` status, and transitions the `TestRun` status within a Prisma database transaction.
+- **Strict RBAC Enforcement**: Only users with `OWNER`, `ADMIN`, `QA_MANAGER`, `QA_ENGINEER`, or `AUTOMATION_ENGINEER` roles can create or modify test plans, test runs, and submit executions. Users with `VIEWER` or `DEVELOPER` roles cannot perform destructive or execution state changes.

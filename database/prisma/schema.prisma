@@ -78,6 +78,21 @@ enum ExecutionStatus {
   RETEST
 }
 
+enum TestPlanStatus {
+  DRAFT
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  ARCHIVED
+}
+
+enum TestRunStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  ABORTED
+}
+
 enum DefectSeverity {
   CRITICAL
   MAJOR
@@ -142,7 +157,11 @@ model User {
   defectComments       DefectComment[]
   defectHistories      DefectHistory[]
   assignedTestRuns     TestRun[]            @relation("TestRunAssignee")
+  createdTestRuns      TestRun[]            @relation("TestRunCreator")
+  assignedRunCases     TestRunCase[]        @relation("RunCaseAssignee")
+  managedTestPlans     TestPlan[]           @relation("TestPlanManager")
   executedResults      TestResult[]         @relation("ResultExecutor")
+  uploadedAttachments  Attachment[]         @relation("AttachmentUploader")
   ownedMilestones      Milestone[]          @relation("MilestoneOwner")
   authoredTestCases    TestCase[]           @relation("TestCaseAuthor")
   createdCaseVersions  TestCaseVersion[]    @relation("VersionCreator")
@@ -336,6 +355,7 @@ model Project {
   testPlans      TestPlan[]
   testRuns       TestRun[]
   defects        Defect[]
+  attachments    Attachment[]
   integrations   Integration[]
   reportDefs     ReportDefinition[]
   reportSnapshots ReportSnapshot[]
@@ -375,6 +395,7 @@ model Environment {
   updatedAt   DateTime  @updatedAt
 
   project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  testPlans   TestPlan[]
   testRuns    TestRun[]
   defects     Defect[]
 
@@ -500,6 +521,7 @@ model TestCaseVersion {
   createdBy     User?             @relation("VersionCreator", fields: [createdById], references: [id], onDelete: SetNull)
   steps         TestStep[]
   runCases      TestRunCase[]
+  planCases     TestPlanCase[]
 
   @@unique([testCaseId, versionNumber])
   @@index([testCaseId])
@@ -525,10 +547,17 @@ model TestStep {
 model TestPlan {
   id             String         @id @default(uuid())
   projectId      String
+  planNumber     Int            @default(1)
   milestoneId    String?
+  environmentId  String?
+  managerId      String?
   name           String
   description    String?
+  objectives     String?
   scope          String?
+  strategy       String?
+  status         TestPlanStatus @default(DRAFT)
+  priority       TestPriority   @default(MEDIUM)
   entryCriteria  String?
   exitCriteria   String?
   startDate      DateTime?
@@ -538,34 +567,48 @@ model TestPlan {
 
   project        Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
   milestone      Milestone?     @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  environment    Environment?   @relation(fields: [environmentId], references: [id], onDelete: SetNull)
+  manager        User?          @relation("TestPlanManager", fields: [managerId], references: [id], onDelete: SetNull)
   selectedCases  TestPlanCase[]
   testRuns       TestRun[]
 
+  @@unique([projectId, planNumber])
   @@index([projectId])
   @@index([milestoneId])
+  @@index([environmentId])
+  @@index([managerId])
+  @@index([projectId, status])
 }
 
 model TestPlanCase {
-  id         String   @id @default(uuid())
-  testPlanId String
-  testCaseId String
+  id                String          @id @default(uuid())
+  testPlanId        String
+  testCaseId        String
+  testCaseVersionId String?
+  createdAt         DateTime        @default(now())
 
-  testPlan   TestPlan @relation(fields: [testPlanId], references: [id], onDelete: Cascade)
-  testCase   TestCase @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  testPlan          TestPlan        @relation(fields: [testPlanId], references: [id], onDelete: Cascade)
+  testCase          TestCase        @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  testCaseVersion   TestCaseVersion? @relation(fields: [testCaseVersionId], references: [id], onDelete: SetNull)
 
   @@unique([testPlanId, testCaseId])
+  @@index([testPlanId])
+  @@index([testCaseId])
+  @@index([testCaseVersionId])
 }
 
 model TestRun {
   id            String         @id @default(uuid())
   projectId     String
+  runNumber     Int            @default(1)
   testPlanId    String?
   milestoneId   String?
   environmentId String?
   assignedToId  String?
+  createdById   String?
   name          String
   description   String?
-  status        String         @default("PLANNED") // PLANNED, IN_PROGRESS, COMPLETED, CANCELLED
+  status        TestRunStatus  @default(NOT_STARTED)
   isAutomated   Boolean        @default(false)
   startedAt     DateTime?
   completedAt   DateTime?
@@ -577,36 +620,46 @@ model TestRun {
   milestone     Milestone?     @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
   environment   Environment?   @relation(fields: [environmentId], references: [id], onDelete: SetNull)
   assignedTo    User?          @relation("TestRunAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdBy     User?          @relation("TestRunCreator", fields: [createdById], references: [id], onDelete: SetNull)
   cases         TestRunCase[]
 
+  @@unique([projectId, runNumber])
   @@index([projectId])
   @@index([testPlanId])
   @@index([milestoneId])
+  @@index([environmentId])
+  @@index([projectId, status])
 }
 
 model TestRunCase {
   id                String          @id @default(uuid())
   testRunId         String
   testCaseVersionId String
+  assignedToId      String?
   status            ExecutionStatus @default(NOT_RUN)
+  orderIndex        Int             @default(0)
   updatedAt         DateTime        @updatedAt
 
   testRun           TestRun         @relation(fields: [testRunId], references: [id], onDelete: Cascade)
   testCaseVersion   TestCaseVersion @relation(fields: [testCaseVersionId], references: [id], onDelete: Cascade)
+  assignedTo        User?           @relation("RunCaseAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
   results           TestResult[]
 
   @@unique([testRunId, testCaseVersionId])
   @@index([testRunId])
   @@index([testCaseVersionId])
+  @@index([assignedToId])
 }
 
 model TestResult {
   id            String              @id @default(uuid())
   testRunCaseId String
   executedById  String?
+  attemptNumber Int                 @default(1)
   status        ExecutionStatus
   actualResult  String?
   comment       String?
+  failureReason String?
   durationMs    Int?
   executedAt    DateTime            @default(now())
 
@@ -617,6 +670,7 @@ model TestResult {
   defectLinks   DefectTestLink[]
 
   @@index([testRunCaseId])
+  @@index([executedById])
 }
 
 model TestExecutionStep {
@@ -626,6 +680,7 @@ model TestExecutionStep {
   status       ExecutionStatus
   actualResult String?
   comment      String?
+  durationMs   Int?
 
   testResult   TestResult      @relation(fields: [testResultId], references: [id], onDelete: Cascade)
 
@@ -731,19 +786,26 @@ model DefectTestLink {
 // ----------------------------------------------------
 model Attachment {
   id           String      @id @default(uuid())
+  projectId    String?
   fileName     String
   fileSize     Int
   mimeType     String
   fileUrl      String
+  storageKey   String?
+  uploadedById String?
   testResultId String?
   defectId     String?
   createdAt    DateTime    @default(now())
 
+  project      Project?    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploadedBy   User?       @relation("AttachmentUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
   testResult   TestResult? @relation(fields: [testResultId], references: [id], onDelete: Cascade)
   defect       Defect?     @relation(fields: [defectId], references: [id], onDelete: Cascade)
 
+  @@index([projectId])
   @@index([testResultId])
   @@index([defectId])
+  @@index([uploadedById])
 }
 
 model Notification {

@@ -146,3 +146,139 @@
   - Constraints & Indexes:
     - `@@unique([testCaseVersionId, stepNumber])`
     - `@@index([testCaseVersionId])`
+
+---
+
+## 7. Milestone 05 — Test Planning & Execution Schema
+
+### 7.1 Enums
+
+- **`TestPlanStatus`**: `DRAFT`, `PLANNED`, `IN_PROGRESS`, `COMPLETED`, `ARCHIVED`
+- **`TestRunStatus`**: `NOT_STARTED`, `IN_PROGRESS`, `COMPLETED`, `ABORTED`
+- **`ExecutionStatus`**: `NOT_RUN`, `PASSED`, `FAILED`, `BLOCKED`, `SKIPPED`, `RETEST`
+
+### 7.2 Tables & Models
+
+#### `TestPlan`
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `projectId`: UUID (Foreign Key -> `Project`)
+  - `planNumber`: Int (Auto-incremented per project)
+  - `milestoneId`: UUID (Nullable Foreign Key -> `Milestone`)
+  - `environmentId`: UUID (Nullable Foreign Key -> `Environment`)
+  - `managerId`: UUID (Nullable Foreign Key -> `User`)
+  - `name`: VarChar(200)
+  - `description`: Text?
+  - `objectives`: Text?
+  - `scope`: Text?
+  - `strategy`: Text?
+  - `status`: `TestPlanStatus` (Default: `PLANNED`)
+  - `priority`: `TestPriority` (Default: `MEDIUM`)
+  - `entryCriteria`: Text?
+  - `exitCriteria`: Text?
+  - `startDate`: DateTime?
+  - `endDate`: DateTime?
+  - `createdAt`, `updatedAt`: DateTime
+- **Constraints & Indexes**:
+  - `@@unique([projectId, planNumber])`
+  - `@@index([projectId, status])`
+  - `@@index([milestoneId])`
+
+#### `TestPlanCase`
+- Links a test case and its exact immutable version snapshot to a test plan.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `testPlanId`: UUID (Foreign Key -> `TestPlan`, `onDelete: Cascade`)
+  - `testCaseId`: UUID (Foreign Key -> `TestCase`)
+  - `testCaseVersionId`: UUID? (Foreign Key -> `TestCaseVersion`)
+  - `createdAt`: DateTime
+- **Constraints & Indexes**:
+  - `@@unique([testPlanId, testCaseId])`
+  - `@@index([testCaseVersionId])`
+
+#### `TestRun`
+- Represents an execution run workbench.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `projectId`: UUID (Foreign Key -> `Project`, `onDelete: Cascade`)
+  - `runNumber`: Int (Auto-incremented per project)
+  - `testPlanId`: UUID? (Foreign Key -> `TestPlan`)
+  - `milestoneId`: UUID? (Foreign Key -> `Milestone`)
+  - `environmentId`: UUID? (Foreign Key -> `Environment`)
+  - `assignedToId`: UUID? (Foreign Key -> `User`)
+  - `createdById`: UUID? (Foreign Key -> `User`)
+  - `name`: VarChar(200)
+  - `description`: Text?
+  - `status`: `TestRunStatus` (Default: `NOT_STARTED`)
+  - `isAutomated`: Boolean (Default: `false`)
+  - `startedAt`: DateTime?
+  - `completedAt`: DateTime?
+  - `createdAt`, `updatedAt`: DateTime
+- **Constraints & Indexes**:
+  - `@@unique([projectId, runNumber])`
+  - `@@index([projectId, status])`
+  - `@@index([testPlanId])`
+
+#### `TestRunCase`
+- Individual test case assigned to a test run.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `testRunId`: UUID (Foreign Key -> `TestRun`, `onDelete: Cascade`)
+  - `testCaseVersionId`: UUID (Foreign Key -> `TestCaseVersion`)
+  - `assignedToId`: UUID? (Foreign Key -> `User`)
+  - `status`: `ExecutionStatus` (Default: `NOT_RUN`)
+  - `orderIndex`: Int (Default: 0)
+  - `updatedAt`: DateTime
+- **Constraints & Indexes**:
+  - `@@unique([testRunId, testCaseVersionId])`
+  - `@@index([testRunId, status])`
+  - `@@index([assignedToId])`
+
+#### `TestResult`
+- Immutable record for every execution attempt.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `testRunCaseId`: UUID (Foreign Key -> `TestRunCase`, `onDelete: Cascade`)
+  - `executedById`: UUID? (Foreign Key -> `User`)
+  - `attemptNumber`: Int (Default: 1, incremental for retests)
+  - `status`: `ExecutionStatus`
+  - `actualResult`: Text?
+  - `comment`: Text?
+  - `failureReason`: Text?
+  - `durationMs`: Int?
+  - `executedAt`: DateTime
+- **Constraints & Indexes**:
+  - `@@unique([testRunCaseId, attemptNumber])`
+  - `@@index([testRunCaseId, executedAt])`
+  - `@@index([executedById])`
+
+#### `TestExecutionStep`
+- Step-level recorded outcome for an execution attempt.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `testResultId`: UUID (Foreign Key -> `TestResult`, `onDelete: Cascade`)
+  - `stepNumber`: Int
+  - `status`: `ExecutionStatus`
+  - `actualResult`: Text?
+  - `comment`: Text?
+  - `durationMs`: Int?
+- **Constraints & Indexes**:
+  - `@@unique([testResultId, stepNumber])`
+
+#### `Attachment`
+- Defect evidence, logs, and screenshots.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `projectId`: UUID? (Foreign Key -> `Project`)
+  - `testResultId`: UUID? (Foreign Key -> `TestResult`)
+  - `defectId`: UUID?
+  - `uploadedById`: UUID? (Foreign Key -> `User`)
+  - `fileName`: VarChar(255)
+  - `fileSize`: Int
+  - `mimeType`: VarChar(100)
+  - `storageKey`: VarChar(255)?
+  - `fileUrl`: VarChar(500)
+  - `createdAt`: DateTime
+- **Constraints & Indexes**:
+  - `@@index([testResultId])`
+  - `@@index([projectId])`
