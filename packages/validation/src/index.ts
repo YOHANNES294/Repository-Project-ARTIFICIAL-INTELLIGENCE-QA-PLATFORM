@@ -441,6 +441,131 @@ export const retestExecutionSchema = submitExecutionSchema.extend({
   retestNotes: z.string().max(2000).optional().nullable(),
 });
 
+// ----------------------------------------------------
+// DEFECT MANAGEMENT SCHEMAS (Milestone 06)
+// ----------------------------------------------------
+
+export const defectSeverityEnum = z.enum([
+  'CRITICAL',
+  'HIGH',
+  'MAJOR',
+  'MEDIUM',
+  'MODERATE',
+  'LOW',
+  'MINOR',
+  'TRIVIAL',
+]);
+
+export const defectPriorityEnum = z.enum([
+  'URGENT',
+  'CRITICAL',
+  'HIGH',
+  'MEDIUM',
+  'LOW',
+]);
+
+export const defectStatusEnum = z.enum([
+  'NEW',
+  'OPEN',
+  'TRIAGED',
+  'ASSIGNED',
+  'IN_PROGRESS',
+  'FIXED',
+  'READY_FOR_RETEST',
+  'VERIFIED',
+  'CLOSED',
+  'REOPENED',
+  'REJECTED',
+  'DUPLICATE',
+]);
+
+export const defectTypeEnum = z.enum([
+  'FUNCTIONAL',
+  'UI',
+  'API',
+  'PERFORMANCE',
+  'SECURITY',
+  'ACCESSIBILITY',
+  'DATA',
+  'INTEGRATION',
+  'OTHER',
+]);
+
+export const createDefectSchema = z.object({
+  title: z.string().min(3, 'Defect title must be at least 3 characters').max(255).trim(),
+  description: z.string().min(5, 'Defect description must be at least 5 characters').max(10000).trim(),
+  stepsToRepro: z.string().max(10000).optional().nullable(),
+  expectedResult: z.string().max(5000).optional().nullable(),
+  actualResult: z.string().max(5000).optional().nullable(),
+  severity: defectSeverityEnum.default('MEDIUM'),
+  priority: defectPriorityEnum.default('MEDIUM'),
+  type: defectTypeEnum.default('FUNCTIONAL'),
+  status: defectStatusEnum.default('NEW'),
+  environmentId: z.string().uuid('Invalid environment ID').optional().nullable(),
+  milestoneId: z.string().uuid('Invalid milestone ID').optional().nullable(),
+  assigneeId: z.string().uuid('Invalid assignee ID').optional().nullable(),
+  qaOwnerId: z.string().uuid('Invalid QA owner ID').optional().nullable(),
+  dueDate: z.string().datetime().optional().nullable(),
+  browser: z.string().max(100).optional().nullable(),
+  os: z.string().max(100).optional().nullable(),
+  appVersion: z.string().max(100).optional().nullable(),
+  device: z.string().max(100).optional().nullable(),
+  component: z.string().max(100).optional().nullable(),
+  tagNames: z.array(z.string().min(1).max(50)).default([]),
+  testResultId: z.string().uuid('Invalid test result ID').optional().nullable(),
+  testCaseId: z.string().uuid('Invalid test case ID').optional().nullable(),
+  testRunId: z.string().uuid('Invalid test run ID').optional().nullable(),
+  attachmentIds: z.array(z.string().uuid('Invalid attachment ID')).optional(),
+});
+
+export const updateDefectSchema = z.object({
+  title: z.string().min(3, 'Defect title must be at least 3 characters').max(255).trim().optional(),
+  description: z.string().min(5, 'Defect description must be at least 5 characters').max(10000).trim().optional(),
+  stepsToRepro: z.string().max(10000).optional().nullable(),
+  expectedResult: z.string().max(5000).optional().nullable(),
+  actualResult: z.string().max(5000).optional().nullable(),
+  severity: defectSeverityEnum.optional(),
+  priority: defectPriorityEnum.optional(),
+  type: defectTypeEnum.optional(),
+  environmentId: z.string().uuid('Invalid environment ID').optional().nullable(),
+  milestoneId: z.string().uuid('Invalid milestone ID').optional().nullable(),
+  assigneeId: z.string().uuid('Invalid assignee ID').optional().nullable(),
+  qaOwnerId: z.string().uuid('Invalid QA owner ID').optional().nullable(),
+  dueDate: z.string().datetime().optional().nullable(),
+  browser: z.string().max(100).optional().nullable(),
+  os: z.string().max(100).optional().nullable(),
+  appVersion: z.string().max(100).optional().nullable(),
+  device: z.string().max(100).optional().nullable(),
+  component: z.string().max(100).optional().nullable(),
+  rootCause: z.string().max(5000).optional().nullable(),
+  resolution: z.string().max(5000).optional().nullable(),
+  tagNames: z.array(z.string().min(1).max(50)).optional(),
+});
+
+export const transitionDefectStatusSchema = z.object({
+  status: defectStatusEnum,
+  resolution: z.string().max(5000).optional().nullable(),
+  reason: z.string().max(2000).optional().nullable(),
+  duplicateOfId: z.string().uuid('Invalid duplicate defect ID').optional().nullable(),
+});
+
+export const assignDefectSchema = z.object({
+  assigneeId: z.string().uuid('Invalid assignee ID').optional().nullable(),
+  qaOwnerId: z.string().uuid('Invalid QA owner ID').optional().nullable(),
+});
+
+export const createDefectCommentSchema = z.object({
+  content: z.string().min(1, 'Comment cannot be empty').max(5000).trim(),
+  parentId: z.string().uuid('Invalid parent comment ID').optional().nullable(),
+  isInternal: z.boolean().default(false),
+});
+
+export const linkDefectTestSchema = z.object({
+  testCaseId: z.string().uuid('Invalid test case ID').optional().nullable(),
+  testResultId: z.string().uuid('Invalid test result ID').optional().nullable(),
+  testRunId: z.string().uuid('Invalid test run ID').optional().nullable(),
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;

@@ -30,6 +30,7 @@ import {
   ArrowRight,
   ClipboardList,
   PlayCircle,
+  Bug,
 } from 'lucide-react';
 
 export default function ProjectDetailPage() {
@@ -407,6 +408,22 @@ export default function ProjectDetailPage() {
                   </h4>
                   <p className="text-xs text-slate-500 mt-1">
                     Workbenches, live runners, retests & metrics
+                  </p>
+                </Link>
+
+                <Link
+                  href={`/projects/${projectId}/defects`}
+                  className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:border-rose-500 hover:shadow-md transition-all group"
+                >
+                  <div className="p-2.5 rounded-lg bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300 w-fit mb-3 group-hover:scale-105 transition-transform">
+                    <Bug className="h-5 w-5" />
+                  </div>
+                  <h4 className="font-bold text-slate-900 dark:text-white text-sm flex items-center justify-between">
+                    Defects & Bug Tracking
+                    <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-rose-600 transition-colors" />
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Lifecycle states, duplicate checks & test links
                   </p>
                 </Link>
               </div>

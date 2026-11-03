@@ -282,3 +282,88 @@
 - **Constraints & Indexes**:
   - `@@index([testResultId])`
   - `@@index([projectId])`
+
+---
+
+### 7. Milestone 06 — Defect Management & Bug Tracking Models
+
+#### `Defect`
+- Full-fidelity bug tracking entity.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `projectId`: UUID (Foreign Key -> `Project`, `onDelete: Cascade`)
+  - `defectNumber`: Int (Auto-incremented per project)
+  - `title`: VarChar(255)
+  - `description`: Text
+  - `stepsToRepro`: Text?
+  - `expectedResult`: Text?
+  - `actualResult`: Text?
+  - `browser`: VarChar(100)?
+  - `os`: VarChar(100)?
+  - `appVersion`: VarChar(100)?
+  - `device`: VarChar(100)?
+  - `component`: VarChar(100)?
+  - `severity`: `DefectSeverity` (`CRITICAL`, `HIGH`, `MAJOR`, `MEDIUM`, `MODERATE`, `LOW`, `MINOR`, `TRIVIAL`)
+  - `priority`: `DefectPriority` (`URGENT`, `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`)
+  - `status`: `DefectStatus` (`NEW`, `OPEN`, `TRIAGED`, `ASSIGNED`, `IN_PROGRESS`, `FIXED`, `READY_FOR_RETEST`, `VERIFIED`, `CLOSED`, `REOPENED`, `REJECTED`, `DUPLICATE`)
+  - `type`: `DefectType` (`FUNCTIONAL`, `UI`, `API`, `PERFORMANCE`, `SECURITY`, `ACCESSIBILITY`, `DATA`, `INTEGRATION`, `OTHER`)
+  - `environmentId`: UUID? (Foreign Key -> `Environment`)
+  - `milestoneId`: UUID? (Foreign Key -> `Milestone`)
+  - `reporterId`: UUID (Foreign Key -> `User`)
+  - `assigneeId`: UUID? (Foreign Key -> `User`)
+  - `qaOwnerId`: UUID? (Foreign Key -> `User`)
+  - `dueDate`: DateTime?
+  - `resolution`: Text?
+  - `rootCause`: Text?
+  - `resolvedAt`: DateTime?
+  - `closedAt`: DateTime?
+  - `duplicateOfId`: UUID? (Self-relation -> `Defect`)
+  - `createdAt`, `updatedAt`: DateTime
+- **Constraints & Indexes**:
+  - `@@unique([projectId, defectNumber])`
+  - `@@index([projectId, status])`
+  - `@@index([projectId, severity])`
+  - `@@index([assigneeId])`
+  - `@@index([qaOwnerId])`
+  - `@@index([duplicateOfId])`
+
+#### `DefectComment`
+- Threaded discussions and staff internal notes.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `defectId`: UUID (Foreign Key -> `Defect`, `onDelete: Cascade`)
+  - `userId`: UUID (Foreign Key -> `User`)
+  - `parentId`: UUID? (Self-relation -> `DefectComment`, for threaded replies)
+  - `content`: Text
+  - `isInternal`: Boolean (Default: `false`, strictly hidden from `VIEWER` users)
+  - `createdAt`, `updatedAt`: DateTime
+- **Constraints & Indexes**:
+  - `@@index([defectId, createdAt])`
+  - `@@index([parentId])`
+
+#### `DefectHistory`
+- Immutable field-level audit trail.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `defectId`: UUID (Foreign Key -> `Defect`, `onDelete: Cascade`)
+  - `userId`: UUID (Foreign Key -> `User`)
+  - `field`: VarChar(100)
+  - `oldValue`: Text?
+  - `newValue`: Text?
+  - `reason`: Text?
+  - `changedAt`: DateTime
+- **Constraints & Indexes**:
+  - `@@index([defectId, changedAt])`
+
+#### `DefectTestLink`
+- Bidirectional traceability between defects and test artifacts.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `defectId`: UUID (Foreign Key -> `Defect`, `onDelete: Cascade`)
+  - `testCaseId`: UUID? (Foreign Key -> `TestCase`)
+  - `testResultId`: UUID? (Foreign Key -> `TestResult`)
+  - `testRunId`: UUID? (Foreign Key -> `TestRun`)
+- **Constraints & Indexes**:
+  - `@@unique([defectId, testCaseId, testResultId])`
+  - `@@index([testCaseId])`
+  - `@@index([testRunId])`

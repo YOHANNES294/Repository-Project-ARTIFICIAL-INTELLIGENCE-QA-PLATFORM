@@ -267,3 +267,63 @@ Base route: `/api/v1/projects/:projectId`
   - Environment-level execution breakdown.
   - Tester workload and execution breakdown.
   - Recent real-time execution activity stream.
+
+---
+
+## 8. Milestone 06 — Defect Management & Bug Tracking APIs
+
+Base route: `/api/v1/projects/:projectId`
+
+### 8.1 Defect Lifecycle & Management (`/defects`)
+
+- `GET /defects`: List defects with filtering (`search`, `status`, `severity`, `priority`, `type`, `assigneeId`, `qaOwnerId`, `reporterId`, `environmentId`, `milestoneId`, `component`), pagination (`page`, `limit`), and sorting.
+- `POST /defects`: Create a defect with project-scoped sequential identifier (e.g. `CORE-BUG-1`). Automatically associates reporter, optional developer assignee, QA owner, environment, and milestone. When created from test execution, auto-creates `DefectTestLink`.
+- `GET /defects/:defectId`: Retrieve full defect workbench details, including relations to reporter, assignee, QA owner, environment, milestone, duplicate relations, linked tests, and comments.
+- `PATCH /defects/:defectId`: Update defect fields (title, description, stepsToRepro, expectedResult, actualResult, severity, priority, component, environment, milestone, device, browser, OS, appVersion, dueDate, rootCause, resolution). Logs all field modifications to `DefectHistory`.
+- `DELETE /defects/:defectId`: Delete defect. Requires `QA_MANAGER`, `ADMINISTRATOR`, or `OWNER` role.
+
+### 8.2 Defect Status Transitions & State Machine (`/defects/:defectId/status`)
+
+- `POST /defects/:defectId/status`: Validated lifecycle transition with strict state machine enforcement:
+  - Allowed transitions:
+    - `NEW` / `OPEN` / `REOPENED` -> `IN_PROGRESS`, `FIXED`, `REJECTED`, `DUPLICATE`
+    - `IN_PROGRESS` -> `FIXED`, `REJECTED`
+    - `FIXED` -> `READY_FOR_RETEST`, `REOPENED`
+    - `READY_FOR_RETEST` -> `VERIFIED`, `REOPENED`
+    - `VERIFIED` -> `CLOSED`, `REOPENED`
+    - `CLOSED`, `REJECTED`, `DUPLICATE` -> `REOPENED`
+  - Validation rules:
+    - Moving to `FIXED` requires non-empty `resolution` notes and automatically sets `resolvedAt`.
+    - Moving to `REJECTED` or `REOPENED` requires a descriptive `reason`.
+    - Moving to `CLOSED` sets `closedAt`.
+    - Moving to `DUPLICATE` requires valid `duplicateOfId` in the same project and prevents circular reference chains (e.g. A -> B -> A).
+
+### 8.3 Assignments & Duplicate Candidate Engine
+
+- `POST /defects/:defectId/assign`: Assign or update developer assignee and/or QA owner.
+- `GET /defects/duplicate-candidates`: Similarity search engine comparing incoming defect title, component, and environment with existing defects. Returns candidate duplicates with confidence percentage scores (0-100%) and matching rationales.
+
+### 8.4 Test Traceability Linking (`/defects/:defectId/links`)
+
+- `POST /defects/:defectId/links`: Link defect to test case, test run, or specific test execution result. Cross-project linking is strictly prevented.
+- `DELETE /defects/:defectId/links/:linkId`: Remove test traceability link.
+
+### 8.5 Threaded Comments & Internal Notes (`/defects/:defectId/comments`)
+
+- `GET /defects/:defectId/comments`: Retrieve discussion comments with nested threaded replies. **Security rule**: If requesting user has `VIEWER` role, internal staff notes (`isInternal: true`) are strictly filtered out from the response.
+- `POST /defects/:defectId/comments`: Add comment or internal staff note. Supports threaded replies via `parentId`.
+- `DELETE /defects/:defectId/comments/:commentId`: Delete comment. Allowed for comment author or QA Manager/Admin/Owner.
+
+### 8.6 Defect Audit Trail & History (`/defects/:defectId/history`)
+
+- `GET /defects/:defectId/history`: Retrieve full chronological audit log of all property modifications and status transitions with timestamp, actor, old value, new value, and reason.
+
+### 8.7 Defect Analytics & Metrics (`/defects/analytics`)
+
+- `GET /defects/analytics`: Database-backed defect metrics and KPIs:
+  - Total defects, open defects, resolved defects, closed defects, critical/high defects.
+  - Average time to resolution in hours (`avgTimeToResolutionHours`).
+  - Defect reopen rate percentage (`reopenedRate`).
+  - Distribution by status, severity, priority, developer, component, and milestone.
+  - Aging buckets: `< 7 days`, `7 - 30 days`, `> 30 days`.
+  - Empty dataset safety: returns 0 and empty collections with zero divide-by-zero errors.

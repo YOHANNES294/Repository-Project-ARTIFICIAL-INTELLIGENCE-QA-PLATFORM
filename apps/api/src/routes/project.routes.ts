@@ -19,6 +19,7 @@ import { testRunRouter } from './test-run.routes.js';
 import { executionRouter } from './execution.routes.js';
 import { attachmentRouter } from './attachment.routes.js';
 import { analyticsRouter } from './analytics.routes.js';
+import { defectRouter } from './defect.routes.js';
 
 export const projectRouter: Router = Router();
 
@@ -496,6 +497,9 @@ projectRouter.use('/:projectId/test-runs', testRunRouter);
 projectRouter.use('/:projectId/test-runs/:runId/cases', executionRouter);
 projectRouter.use('/:projectId/attachments', attachmentRouter);
 projectRouter.use('/:projectId', analyticsRouter);
+
+// Mount Milestone 06 subrouters scoped to project
+projectRouter.use('/:projectId/defects', defectRouter);
 
 
 

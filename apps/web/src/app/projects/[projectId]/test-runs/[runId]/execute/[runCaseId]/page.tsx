@@ -28,6 +28,8 @@ import {
   Paperclip,
   Check,
   Timer,
+  Bug,
+  ExternalLink,
 } from 'lucide-react';
 
 export default function TestExecutionRunnerPage() {
@@ -65,6 +67,12 @@ export default function TestExecutionRunnerPage() {
   const { data: historyData, isLoading: historyLoading } = useQuery({
     queryKey: ['execution-history', projectId, runId, runCaseId],
     queryFn: () => defaultApiClient.getExecutionHistory(projectId, runId, runCaseId),
+  });
+
+  // Fetch Defects for this project to show linked defects
+  const { data: defectsData } = useQuery({
+    queryKey: ['project-defects-for-case', projectId],
+    queryFn: () => defaultApiClient.getDefects(projectId, { limit: 100 }),
   });
 
   const runCase = run?.cases?.find((c: TestRunCaseDto) => c.id === runCaseId);
@@ -246,6 +254,13 @@ export default function TestExecutionRunnerPage() {
 
   const anyStepFailed = Object.values(stepExecutions).some(
     (s) => s.status === ExecutionStatus.FAILED
+  );
+
+  const linkedDefects = (defectsData?.defects || []).filter(
+    (d: any) =>
+      d.testLinks?.some((l: any) => l.testCaseId === tc?.id || l.testRunId === runId) ||
+      d.testCaseId === tc?.id ||
+      (tc?.key && d.title?.includes(tc.key))
   );
 
   return (
@@ -508,6 +523,22 @@ export default function TestExecutionRunnerPage() {
           </Link>
 
           <div className="flex items-center gap-3">
+            <Link
+              href={`/projects/${projectId}/defects/new?testCaseId=${tc?.id}&runId=${runId}&actualResult=${encodeURIComponent(
+                actualResult || ''
+              )}&failureReason=${encodeURIComponent(
+                failureReason || ''
+              )}&title=${encodeURIComponent(`[Failure] ${tcVersion.title}`)}`}
+              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold border transition-all ${
+                anyStepFailed
+                  ? 'bg-rose-600 hover:bg-rose-500 text-white border-rose-500 shadow-lg shadow-rose-600/30'
+                  : 'bg-slate-900 hover:bg-slate-800 text-rose-400 border-slate-800'
+              }`}
+            >
+              <Bug className="w-4 h-4" />
+              Log Defect
+            </Link>
+
             {isRetestMode ? (
               <button
                 type="button"
@@ -533,6 +564,48 @@ export default function TestExecutionRunnerPage() {
             )}
           </div>
         </div>
+
+        {/* Known Linked Defects for Retest */}
+        {linkedDefects.length > 0 && (
+          <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 space-y-4">
+            <h2 className="text-base font-semibold text-white flex items-center gap-2 border-b border-slate-800/80 pb-3">
+              <Bug className="w-4 h-4 text-rose-400" />
+              Known Linked Defects ({linkedDefects.length})
+            </h2>
+            <div className="space-y-3">
+              {linkedDefects.map((def: any) => (
+                <div
+                  key={def.id}
+                  className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between text-xs"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-rose-400">{def.key}</span>
+                      <span className="text-white font-medium">{def.title}</span>
+                    </div>
+                    <div className="text-slate-400 flex items-center gap-2 text-[11px]">
+                      <span>
+                        Severity: <strong className="text-slate-200">{def.severity}</strong>
+                      </span>
+                      <span>•</span>
+                      <span>
+                        Status: <strong className="text-emerald-400">{def.status}</strong>
+                      </span>
+                    </div>
+                  </div>
+                  <Link
+                    href={`/projects/${projectId}/defects/${def.id}`}
+                    target="_blank"
+                    className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white flex items-center gap-1.5 font-medium border border-slate-800"
+                  >
+                    <span>View Defect</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Execution History & Retest Audit Trail */}
         {historyList.length > 0 && (

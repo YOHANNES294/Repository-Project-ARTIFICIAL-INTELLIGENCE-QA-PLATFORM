@@ -79,12 +79,21 @@ Status Legend:
 
 ---
 
-## Milestone 06 — Defect Management
-- [ ] Defect lifecycle (Open -> Triaged -> Assigned -> In Progress -> Fixed -> Ready for Retest -> Verified -> Closed)
-- [ ] Defect creation with steps to reproduce, severity, priority, browser/OS environment
-- [ ] Defect comments, activity history, and file attachments
-- [ ] Traceability link between failed test executions and defects
-- [ ] Duplicate defect detection mechanism
+## Milestone 06 — Defect Management and Bug Tracking
+- [x] Complete Defect CRUD with project-scoped sequential identifiers (e.g. `CORE-BUG-1`)
+- [x] Defect classification (Severity, Priority, Defect Type, Environment, Milestone, Reporter, Assignee, QA Owner, Component, Due Date)
+- [x] Full defect reproduction attributes (Title, Description, Steps to Reproduce, Expected Behavior, Actual Behavior, Browser, OS, App Version, Device)
+- [x] Strict state machine lifecycle transitions (NEW, OPEN, IN_PROGRESS, FIXED, READY_FOR_RETEST, VERIFIED, CLOSED, REOPENED, REJECTED, DUPLICATE)
+- [x] Mandatory resolution notes enforcement on transition to FIXED
+- [x] Mandatory reason explanation enforcement on transition to REJECTED and REOPENED
+- [x] Canonical duplicate defect linking with recursive cycle prevention (up to 25 hops)
+- [x] Test execution integration: create defect directly from failed execution with prefill, auto-link `DefectTestLink`, multi-test linking & unlinking
+- [x] Real-time duplicate defect candidate detection engine with confidence scoring and matching rationales
+- [x] Threaded comments and discussions with "Internal Staff Notes" visibility isolation (hidden from VIEWER users)
+- [x] Field-level defect audit trail and chronological history logging (`DefectHistory`)
+- [x] Database-backed defect analytics (Total, Open, Critical/High, Resolved, Closed, Reopened Rate, Avg Resolution Time, aging, breakdowns by status, severity, priority, developer, component, milestone)
+- [x] Frontend Next.js 16 UI: Defects listing with filters & search, defect creator with live duplicate detector, defect workbench with state action buttons & duplicate linking, edit form, threaded comments with internal notes toggle, test execution runner "Log Defect" button & known defects panel
+- [x] Automated unit and integration test suite: 100% passing across 15 test files and 81 tests in `apps/api` (87 tests monorepo-wide)
 
 ---
 

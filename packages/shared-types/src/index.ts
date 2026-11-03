@@ -94,14 +94,18 @@ export enum ExecutionStatus {
 // Defect Severity
 export enum DefectSeverity {
   CRITICAL = 'CRITICAL',
+  HIGH = 'HIGH',
   MAJOR = 'MAJOR',
+  MEDIUM = 'MEDIUM',
   MODERATE = 'MODERATE',
+  LOW = 'LOW',
   MINOR = 'MINOR',
   TRIVIAL = 'TRIVIAL',
 }
 
 // Defect Priority
 export enum DefectPriority {
+  URGENT = 'URGENT',
   CRITICAL = 'CRITICAL',
   HIGH = 'HIGH',
   MEDIUM = 'MEDIUM',
@@ -110,6 +114,7 @@ export enum DefectPriority {
 
 // Defect Lifecycle Status
 export enum DefectStatus {
+  NEW = 'NEW',
   OPEN = 'OPEN',
   TRIAGED = 'TRIAGED',
   ASSIGNED = 'ASSIGNED',
@@ -120,6 +125,20 @@ export enum DefectStatus {
   CLOSED = 'CLOSED',
   REOPENED = 'REOPENED',
   REJECTED = 'REJECTED',
+  DUPLICATE = 'DUPLICATE',
+}
+
+// Defect Types
+export enum DefectType {
+  FUNCTIONAL = 'FUNCTIONAL',
+  UI = 'UI',
+  API = 'API',
+  PERFORMANCE = 'PERFORMANCE',
+  SECURITY = 'SECURITY',
+  ACCESSIBILITY = 'ACCESSIBILITY',
+  DATA = 'DATA',
+  INTEGRATION = 'INTEGRATION',
+  OTHER = 'OTHER',
 }
 
 // SaaS Billing Plans
@@ -756,5 +775,272 @@ export interface ExecutionAnalyticsDto {
     testerName: string;
     durationMs: number | null;
   }>;
+}
+
+// ----------------------------------------------------
+// DEFECT MANAGEMENT DTOS (Milestone 06)
+// ----------------------------------------------------
+
+export interface DefectTestLinkDto {
+  id: string;
+  defectId: string;
+  testCaseId: string | null;
+  testResultId: string | null;
+  testRunId: string | null;
+  testCase?: {
+    id: string;
+    caseNumber: number;
+    key?: string;
+    title: string;
+  } | null;
+  testResult?: {
+    id: string;
+    attemptNumber: number;
+    status: ExecutionStatus | any;
+    executedAt: string;
+  } | null;
+  testRun?: {
+    id: string;
+    runNumber: number;
+    key?: string;
+    name: string;
+  } | null;
+}
+
+export interface DefectCommentDto {
+  id: string;
+  defectId: string;
+  userId: string;
+  parentId: string | null;
+  content: string;
+  isInternal: boolean;
+  createdAt: string;
+  updatedAt: string;
+  user?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    avatarUrl?: string | null;
+  };
+  replies?: DefectCommentDto[];
+}
+
+export interface DefectHistoryDto {
+  id: string;
+  defectId: string;
+  userId: string;
+  field: string;
+  oldValue: string | null;
+  newValue: string | null;
+  reason: string | null;
+  changedAt: string;
+  user?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  };
+}
+
+export interface DefectDto {
+  id: string;
+  projectId: string;
+  defectNumber: number;
+  key?: string; // e.g. "CORE-BUG-1"
+  title: string;
+  description: string;
+  stepsToRepro: string | null;
+  expectedResult: string | null;
+  actualResult: string | null;
+  browser: string | null;
+  os: string | null;
+  appVersion: string | null;
+  device: string | null;
+  component: string | null;
+  severity: DefectSeverity | any;
+  priority: DefectPriority | any;
+  status: DefectStatus | any;
+  type: DefectType | any;
+  environmentId: string | null;
+  milestoneId: string | null;
+  reporterId: string;
+  assigneeId: string | null;
+  qaOwnerId: string | null;
+  dueDate: string | null;
+  resolution: string | null;
+  rootCause: string | null;
+  resolvedAt: string | null;
+  closedAt: string | null;
+  duplicateOfId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  environment?: {
+    id: string;
+    name: string;
+  } | null;
+  milestone?: {
+    id: string;
+    name: string;
+  } | null;
+  reporter?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  };
+  assignee?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+  qaOwner?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+  duplicateOf?: {
+    id: string;
+    defectNumber: number;
+    key?: string;
+    title: string;
+    status: DefectStatus | any;
+  } | null;
+  duplicates?: Array<{
+    id: string;
+    defectNumber: number;
+    key?: string;
+    title: string;
+    status: DefectStatus | any;
+  }>;
+  tags?: Array<{
+    id: string;
+    name: string;
+    color: string;
+  }>;
+  testLinks?: DefectTestLinkDto[];
+  comments?: DefectCommentDto[];
+  history?: DefectHistoryDto[];
+  attachments?: AttachmentDto[];
+  _count?: {
+    comments: number;
+    attachments: number;
+    testLinks: number;
+    duplicates: number;
+  };
+}
+
+export interface DuplicateCandidateDto {
+  defect: DefectDto;
+  confidence: number;
+  matchReasons: string[];
+}
+
+export interface DefectAnalyticsDto {
+  totalDefects: number;
+  openDefects: number;
+  resolvedDefects: number;
+  closedDefects: number;
+  criticalHighDefects: number;
+  avgTimeToResolutionHours: number;
+  reopenedRate: number;
+  byStatus: Array<{ status: DefectStatus | string; count: number }>;
+  bySeverity: Array<{ severity: DefectSeverity | string; count: number }>;
+  byPriority: Array<{ priority: DefectPriority | string; count: number }>;
+  byDeveloper: Array<{ userId: string; name: string; email: string; count: number }>;
+  byComponent: Array<{ component: string; count: number }>;
+  byMilestone: Array<{ milestoneId: string; name: string; count: number }>;
+  aging: {
+    lessThan7Days: number;
+    between7And30Days: number;
+    moreThan30Days: number;
+  };
+  recentActivity: Array<{
+    id: string;
+    defectId: string;
+    defectKey: string;
+    defectTitle: string;
+    field: string;
+    newValue: string | null;
+    changedBy: string;
+    changedAt: string;
+  }>;
+}
+
+export interface CreateDefectInput {
+  title: string;
+  description: string;
+  stepsToRepro?: string | null;
+  expectedResult?: string | null;
+  actualResult?: string | null;
+  severity?: DefectSeverity | any;
+  priority?: DefectPriority | any;
+  type?: DefectType | any;
+  status?: DefectStatus | any;
+  environmentId?: string | null;
+  milestoneId?: string | null;
+  assigneeId?: string | null;
+  qaOwnerId?: string | null;
+  dueDate?: string | null;
+  browser?: string | null;
+  os?: string | null;
+  appVersion?: string | null;
+  device?: string | null;
+  component?: string | null;
+  tagNames?: string[];
+  testResultId?: string | null;
+  testCaseId?: string | null;
+  testRunId?: string | null;
+  attachmentIds?: string[];
+}
+
+export interface UpdateDefectInput {
+  title?: string;
+  description?: string;
+  stepsToRepro?: string | null;
+  expectedResult?: string | null;
+  actualResult?: string | null;
+  severity?: DefectSeverity | any;
+  priority?: DefectPriority | any;
+  type?: DefectType | any;
+  environmentId?: string | null;
+  milestoneId?: string | null;
+  assigneeId?: string | null;
+  qaOwnerId?: string | null;
+  dueDate?: string | null;
+  browser?: string | null;
+  os?: string | null;
+  appVersion?: string | null;
+  device?: string | null;
+  component?: string | null;
+  rootCause?: string | null;
+  resolution?: string | null;
+  tagNames?: string[];
+}
+
+export interface TransitionDefectStatusInput {
+  status: DefectStatus | any;
+  resolution?: string | null;
+  reason?: string | null;
+  duplicateOfId?: string | null;
+}
+
+export interface AssignDefectInput {
+  assigneeId?: string | null;
+  qaOwnerId?: string | null;
+}
+
+export interface CreateDefectCommentInput {
+  content: string;
+  parentId?: string | null;
+  isInternal?: boolean;
+}
+
+export interface LinkDefectTestInput {
+  testCaseId?: string | null;
+  testResultId?: string | null;
+  testRunId?: string | null;
 }
 

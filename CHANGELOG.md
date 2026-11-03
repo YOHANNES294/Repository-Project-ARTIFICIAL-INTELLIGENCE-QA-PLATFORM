@@ -2,7 +2,42 @@
 
 All notable changes to the Artificial Intelligence QA Platform will be documented here.
 
-## [0.5.0] - Milestone 05 Completion: Test Planning & Execution
+## [0.6.0] - Milestone 06 Completion: Defect Management & Bug Tracking
+### Added
+- **Defect Lifecycle & Domain Model**:
+  - Extended Prisma schema with domain models `Defect`, `DefectComment`, `DefectHistory`, and `DefectTestLink`.
+  - Enums `DefectSeverity` (`CRITICAL`, `HIGH`, `MAJOR`, `MEDIUM`, `MODERATE`, `LOW`, `MINOR`, `TRIVIAL`), `DefectPriority` (`URGENT`, `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`), `DefectStatus` (`NEW`, `OPEN`, `TRIAGED`, `ASSIGNED`, `IN_PROGRESS`, `FIXED`, `READY_FOR_RETEST`, `VERIFIED`, `CLOSED`, `REOPENED`, `REJECTED`, `DUPLICATE`), and `DefectType` (`FUNCTIONAL`, `UI`, `API`, `PERFORMANCE`, `SECURITY`, `ACCESSIBILITY`, `DATA`, `INTEGRATION`, `OTHER`).
+  - Concurrency-safe project-scoped sequential identifiers (e.g. `CORE-BUG-1`).
+  - Strict state machine lifecycle transitions with validation enforcement (resolution notes mandatory on `FIXED`, reason mandatory on `REJECTED` and `REOPENED`).
+  - Canonical duplicate defect linking with recursive cycle prevention up to 25 hops.
+  - REST endpoints under `/api/v1/projects/:projectId/defects`.
+- **Test Execution Traceability**:
+  - 1-click defect creation directly from failed test steps and execution attempts, prefilling observed results, failure reason, and test case title.
+  - Bidirectional traceability via `DefectTestLink` connecting defects to test cases, test runs, and specific execution attempt results.
+  - Multi-test linking and unlinking capability with cross-project boundary validation.
+- **Duplicate Defect Detection Engine**:
+  - Real-time similarity scoring across defect title, affected component, and target environment.
+  - Returns duplicate candidates with similarity percentages (0-100%) and matching rationales to prevent redundant bug filings.
+- **Collaboration & Information Privacy**:
+  - Threaded comment discussions with parent-child hierarchy.
+  - "Internal Staff Notes" (`isInternal: true`) with visibility isolation (strictly filtered out for `VIEWER` users).
+  - Chronological field-level audit trail (`DefectHistory`) capturing every property modification and status transition.
+- **Database-Backed Defect Analytics**:
+  - Comprehensive quality metrics: total, open, resolved, closed, critical/high defects, average resolution time in hours (`avgTimeToResolutionHours`), defect reopen rate (`reopenedRate`), and aging buckets.
+  - Categorical breakdowns by status, severity, priority, developer, component, and milestone.
+  - Empty dataset safety returning zero counts without divide-by-zero errors.
+  - REST endpoint under `/api/v1/projects/:projectId/defects/analytics`.
+- **Frontend Next.js 16 UI**:
+  - Defects Listing (`/projects/[projectId]/defects`) with status, severity, priority, type filters, search, and pagination.
+  - Defect Creator (`/projects/[projectId]/defects/new`) with execution prefilling and live duplicate candidate detector.
+  - Defect Workbench (`/projects/[projectId]/defects/[defectId]`) with state machine action bar, duplicate linking modal, quick developer/QA assignment, and tabs for Details & Steps, Linked Tests, Comments & Internal Notes, and Audit History.
+  - Defect Edit Form (`/projects/[projectId]/defects/[defectId]/edit`).
+  - Project Dashboard QA Hub updated with Defect & Bug Tracking card.
+  - Test Execution Runner updated with "Log Defect" button and "Known Linked Defects" panel.
+- **Automated Verification**:
+  - 14 new automated unit and integration tests across 3 new test suites: `defect-lifecycle.test.ts`, `defect-execution-link.test.ts`, and `defect-collaboration-analytics.test.ts`.
+  - Total test suite expanded to 87 passing tests across 17 test files (100% success rate).
+  - 0 TypeScript compiler errors and clean production build.
 ### Added
 - **Test Plan Management**:
   - Domain model `TestPlan` and `TestPlanCase` with enums `TestPlanStatus` (`DRAFT`, `PLANNED`, `IN_PROGRESS`, `COMPLETED`, `ARCHIVED`) and `TestPriority`.

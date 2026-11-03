@@ -146,13 +146,47 @@ ARTIFICIAL INTELLIGENCE QA PLATFORM/
 
 ---
 
-## 5. Upcoming Milestone Roadmap (06 — 12)
+## 4.6. Milestone 06 — Defect Management & Bug Tracking (Completed)
 
-### Milestone 06 — Defect and Bug Tracking
-- **Defect Lifecycle**: States from `OPEN`, `TRIAGED`, `ASSIGNED`, `IN_PROGRESS`, `RESOLVED`, `CLOSED`.
-- **Defect-Test Traceability**: 1-click defect creation directly from failed test steps, linking run context, environment variables, and reproduction steps.
-- **External Integrations**: Bidirectional synchronization with Jira, GitHub Issues, and GitLab Issues.
-- **Duplicate Detection**: Identifying potential duplicate defects based on error signatures and component tags.
+- **Complete Defect Lifecycle & Domain Model**:
+  - Project-scoped sequential keys (e.g. `CORE-BUG-1`).
+  - Fields: title, description, stepsToRepro, expectedResult, actualResult, severity, priority, status, type, environment, milestone, reporter, assignee, qaOwner, dueDate, rootCause, resolution, resolvedAt, closedAt, duplicateOfId.
+  - Strict state machine transitions (`NEW`, `OPEN`, `IN_PROGRESS`, `FIXED`, `READY_FOR_RETEST`, `VERIFIED`, `CLOSED`, `REOPENED`, `REJECTED`, `DUPLICATE`).
+  - Strict enforcement: `FIXED` requires non-empty resolution notes; `REJECTED` and `REOPENED` require reason explanation.
+  - Canonical duplicate defect linking with recursive cycle prevention (up to 25 hops).
+- **Test Execution Integration**:
+  - 1-click defect creation directly from failed test steps and executions, prefilling failure reason, observed results, and test case title.
+  - Automatic creation of `DefectTestLink` establishing bidirectional traceability between defects, test cases, test runs, and specific execution attempts.
+  - Multi-test linking and unlinking capability.
+  - "Known Linked Defects" panel displayed in the execution runner for verification during retests.
+- **Duplicate Detection Engine**:
+  - Real-time similarity scoring across defect title, affected component, and environment.
+  - Returns duplicate candidates with similarity percentages and matching rationales.
+- **Collaboration & Audit Trail**:
+  - Threaded discussions with parent-child comments.
+  - "Internal Staff Notes" (`isInternal: true`) with visibility isolation (strictly hidden from `VIEWER` users).
+  - Field-level chronological audit trail (`DefectHistory`) capturing every property modification and status transition.
+- **Database-Backed Defect Analytics**:
+  - Total, open, resolved, closed, critical/high defects.
+  - Average time to resolution in hours (`avgTimeToResolutionHours`).
+  - Defect reopen rate percentage (`reopenedRate`).
+  - Breakdown by status, severity, priority, developer, component, and milestone.
+  - Aging buckets (`< 7 days`, `7 - 30 days`, `> 30 days`).
+  - Empty dataset safety (zero divide-by-zero errors).
+- **Next.js 16 UI**:
+  - Defects list page with status, severity, priority, and type filters, search, and pagination.
+  - Defect creation form with execution prefilling and real-time duplicate candidate detector.
+  - Defect details workbench with status transition action bar, duplicate linking, quick developer/QA assignment, and tabs for reproduction details, linked tests, comments with internal note toggle, and audit history.
+  - Defect edit form for updating attributes and root cause/resolution.
+  - QA Hub defect card on project dashboard.
+  - "Log Defect" button and linked defect viewer on execution runner.
+- **Verification**:
+  - 100% passing across 15 test files and 81 automated tests in `apps/api` (87 tests monorepo-wide).
+  - 0 type check errors across all packages and Next.js 16 production build (`pnpm build`).
+
+---
+
+## 5. Upcoming Milestone Roadmap (07 — 12)
 
 ### Milestone 07 — AI Intelligence Engine
 - **Provider-Agnostic AI Gateway**: Standardized adapter interface supporting OpenAI, Anthropic Claude, and Google Gemini with streaming and fallback.

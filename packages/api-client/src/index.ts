@@ -39,6 +39,22 @@ import {
   RetestExecutionInput,
   AttachmentDto,
   ExecutionAnalyticsDto,
+  DefectSeverity,
+  DefectPriority,
+  DefectStatus,
+  DefectType,
+  DefectDto,
+  DefectCommentDto,
+  DefectHistoryDto,
+  DefectTestLinkDto,
+  DuplicateCandidateDto,
+  DefectAnalyticsDto,
+  CreateDefectInput,
+  UpdateDefectInput,
+  TransitionDefectStatusInput,
+  AssignDefectInput,
+  CreateDefectCommentInput,
+  LinkDefectTestInput,
 } from '@ai-qa/shared-types';
 
 export interface ProjectListParams {
@@ -827,6 +843,183 @@ export class ApiClient {
     const queryString = query.toString() ? `?${query.toString()}` : '';
     return this.request<ExecutionAnalyticsDto>(
       `/projects/${projectId}/execution-analytics${queryString}`
+    );
+  }
+
+  // ----------------------------------------------------
+  // DEFECT MANAGEMENT (Milestone 06)
+  // ----------------------------------------------------
+
+  async getDefects(
+    projectId: string,
+    params: {
+      search?: string;
+      status?: DefectStatus;
+      severity?: DefectSeverity;
+      priority?: DefectPriority;
+      type?: DefectType;
+      assigneeId?: string;
+      qaOwnerId?: string;
+      reporterId?: string;
+      environmentId?: string;
+      milestoneId?: string;
+      component?: string;
+      page?: number;
+      limit?: number;
+    } = {}
+  ): Promise<{ defects: DefectDto[]; meta: any }> {
+    const query = new URLSearchParams();
+    if (params.search) query.set('search', params.search);
+    if (params.status) query.set('status', params.status);
+    if (params.severity) query.set('severity', params.severity);
+    if (params.priority) query.set('priority', params.priority);
+    if (params.type) query.set('type', params.type);
+    if (params.assigneeId) query.set('assigneeId', params.assigneeId);
+    if (params.qaOwnerId) query.set('qaOwnerId', params.qaOwnerId);
+    if (params.reporterId) query.set('reporterId', params.reporterId);
+    if (params.environmentId) query.set('environmentId', params.environmentId);
+    if (params.milestoneId) query.set('milestoneId', params.milestoneId);
+    if (params.component) query.set('component', params.component);
+    if (params.page) query.set('page', params.page.toString());
+    if (params.limit) query.set('limit', params.limit.toString());
+
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    return this.request<{ defects: DefectDto[]; meta: any }>(
+      `/projects/${projectId}/defects${queryString}`
+    );
+  }
+
+  async createDefect(projectId: string, payload: CreateDefectInput): Promise<DefectDto> {
+    return this.request<DefectDto>(`/projects/${projectId}/defects`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async getDefect(projectId: string, defectId: string): Promise<DefectDto> {
+    return this.request<DefectDto>(`/projects/${projectId}/defects/${defectId}`);
+  }
+
+  async updateDefect(
+    projectId: string,
+    defectId: string,
+    payload: UpdateDefectInput
+  ): Promise<DefectDto> {
+    return this.request<DefectDto>(`/projects/${projectId}/defects/${defectId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteDefect(projectId: string, defectId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/projects/${projectId}/defects/${defectId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async transitionDefectStatus(
+    projectId: string,
+    defectId: string,
+    payload: TransitionDefectStatusInput
+  ): Promise<DefectDto> {
+    return this.request<DefectDto>(`/projects/${projectId}/defects/${defectId}/status`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async assignDefect(
+    projectId: string,
+    defectId: string,
+    payload: AssignDefectInput
+  ): Promise<DefectDto> {
+    return this.request<DefectDto>(`/projects/${projectId}/defects/${defectId}/assign`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async getDefectDuplicateCandidates(
+    projectId: string,
+    params: { title: string; component?: string; environmentId?: string }
+  ): Promise<DuplicateCandidateDto[]> {
+    const query = new URLSearchParams();
+    query.set('title', params.title);
+    if (params.component) query.set('component', params.component);
+    if (params.environmentId) query.set('environmentId', params.environmentId);
+
+    return this.request<DuplicateCandidateDto[]>(
+      `/projects/${projectId}/defects/duplicate-candidates?${query.toString()}`
+    );
+  }
+
+  async linkDefectTest(
+    projectId: string,
+    defectId: string,
+    payload: LinkDefectTestInput
+  ): Promise<DefectTestLinkDto> {
+    return this.request<DefectTestLinkDto>(`/projects/${projectId}/defects/${defectId}/links`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async unlinkDefectTest(
+    projectId: string,
+    defectId: string,
+    linkId: string
+  ): Promise<{ message: string }> {
+    return this.request<{ message: string }>(
+      `/projects/${projectId}/defects/${defectId}/links/${linkId}`,
+      {
+        method: 'DELETE',
+      }
+    );
+  }
+
+  async getDefectComments(projectId: string, defectId: string): Promise<DefectCommentDto[]> {
+    return this.request<DefectCommentDto[]>(`/projects/${projectId}/defects/${defectId}/comments`);
+  }
+
+  async addDefectComment(
+    projectId: string,
+    defectId: string,
+    payload: CreateDefectCommentInput
+  ): Promise<DefectCommentDto> {
+    return this.request<DefectCommentDto>(`/projects/${projectId}/defects/${defectId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteDefectComment(
+    projectId: string,
+    defectId: string,
+    commentId: string
+  ): Promise<{ message: string }> {
+    return this.request<{ message: string }>(
+      `/projects/${projectId}/defects/${defectId}/comments/${commentId}`,
+      {
+        method: 'DELETE',
+      }
+    );
+  }
+
+  async getDefectHistory(projectId: string, defectId: string): Promise<DefectHistoryDto[]> {
+    return this.request<DefectHistoryDto[]>(`/projects/${projectId}/defects/${defectId}/history`);
+  }
+
+  async getDefectAnalytics(
+    projectId: string,
+    params: { milestoneId?: string; environmentId?: string } = {}
+  ): Promise<DefectAnalyticsDto> {
+    const query = new URLSearchParams();
+    if (params.milestoneId) query.set('milestoneId', params.milestoneId);
+    if (params.environmentId) query.set('environmentId', params.environmentId);
+
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    return this.request<DefectAnalyticsDto>(
+      `/projects/${projectId}/defects/analytics${queryString}`
     );
   }
 }

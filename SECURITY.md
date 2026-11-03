@@ -61,3 +61,24 @@
   - **Authenticated Streaming Downloads**: Files are not publicly exposed via open static directories. Download endpoints verify the user's organization and project membership before streaming the file.
 - **Atomic Transaction Isolation**: Submitting an execution atomically creates the `TestResult`, persists step outcomes, updates the `TestRunCase` status, and transitions the `TestRun` status within a Prisma database transaction.
 - **Strict RBAC Enforcement**: Only users with `OWNER`, `ADMIN`, `QA_MANAGER`, `QA_ENGINEER`, or `AUTOMATION_ENGINEER` roles can create or modify test plans, test runs, and submit executions. Users with `VIEWER` or `DEVELOPER` roles cannot perform destructive or execution state changes.
+
+---
+
+## 8. Milestone 06 — Defect Management & Bug Tracking Security
+
+- **Strict State Machine Enforcement**:
+  - Defect lifecycle transitions are strictly governed by a state transition matrix. Unauthorized jumps (e.g. `CLOSED` directly to `IN_PROGRESS` without intermediate reopening) are blocked with HTTP 400.
+  - Moving to `FIXED` requires non-empty resolution notes (`resolution`), preventing unresolved bugs from being prematurely marked as resolved.
+  - Moving to `REJECTED` or `REOPENED` requires a mandatory reason explanation.
+  - Moving to `CLOSED` sets an immutable `closedAt` timestamp.
+- **Duplicate Cycle Prevention**:
+  - Marking a defect as a `DUPLICATE` requires referencing an existing canonical defect in the same project.
+  - The service executes recursive duplicate chain traversal up to 25 hops to ensure no circular references can be established (e.g. A duplicates B, B duplicates A, or A -> B -> C -> A). Circular duplicate loops are rejected with HTTP 400.
+- **Information Disclosure Isolation (Internal Staff Notes)**:
+  - Discussions in `DefectComment` support an `isInternal` flag for staff-only root cause discussions and notes.
+  - When a user with the `VIEWER` role queries defect comments, internal notes (`isInternal: true`) are systematically stripped at the backend service layer before the response is serialized, preventing information leakage to external or read-only stakeholders.
+- **Tenant & Cross-Project Isolation**:
+  - Defects, duplicate candidate lookups, test execution links, and defect analytics are isolated strictly by `projectId` and active verified `organizationId`.
+  - Linking a defect to a test execution or test case from a different project or organization is strictly denied with HTTP 400.
+- **Field-Level Audit Trail**:
+  - Every update, state transition, and assignment change is logged to `DefectHistory` with the actor's user ID, field name, previous value, new value, and reason, ensuring comprehensive traceability and tamper-evident compliance.
