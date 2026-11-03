@@ -70,3 +70,48 @@ The platform enforces human agency and verification for all AI-generated test ar
 ### 4.5 Graceful Degradation & High Availability
 - If an AI provider is unreachable, times out, or encounters rate limits, core QA workflows (manual test authoring, test execution, defect tracking, and release management) remain 100% operational.
 - The system logs an `AIUsageLog` entry indicating the error code and gracefully informs the user without impacting surrounding operations.
+
+---
+
+## 5. Automation & CI/CD Integration Architecture (Milestone 08)
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                   Automation Ingestion Pipeline                         │
+├──────────────┬──────────────────┬─────────────────┬────────────────────┤
+│ 1. External  │ 2. Scoped Token  │ 3. Mapping &    │ 4. Execution       │
+│    Runners   │    Auth & HMAC   │    Unmapped     │    Attempt History │
+│  (Playwright,│    Verification  │    Resolution   │    & Defect AI     │
+│   Newman, CI)│   (aiqa_auto_*)  │  (@AIQA-101)    │    Linkage         │
+└──────────────┴──────────────────┴─────────────────┴────────────────────┘
+```
+
+### 5.1 External Runner Isolation Principle
+To ensure cloud infrastructure security and prevent remote code execution (RCE), the platform strictly adheres to an **External Runner Architecture**:
+- Customer-supplied test scripts, Playwright specs, Newman collections, and arbitrary binaries are **never executed** within the primary API process or background worker nodes.
+- Execution happens strictly on the customer's CI/CD runners (e.g. GitHub Actions, GitLab CI, local dev machines).
+- External runners stream structured execution results, step breakdowns, console logs, and attachments to the platform's authenticated ingestion API via specialized reporters and adapters.
+
+### 5.2 Scoped Automation Authentication & Token Lifecycle
+- Dedicated project-scoped tokens (`AutomationApiToken`) prefixed with `aiqa_auto_`.
+- Raw token keys are generated using 32 bytes of cryptographically secure random entropy (`crypto.randomBytes(32)`), shown exactly once upon creation, and hashed at rest using SHA-256 (`tokenHash`).
+- Dual-mode authentication middleware (`authenticateAutomationOrUser`) accepts either user session cookies or automation tokens in the `Authorization: Bearer aiqa_auto_...` or `x-automation-token` headers.
+- Tokens can be instantly revoked (`isRevoked: true`), have configurable expiration dates, and enforce granular permission scopes (`AUTOMATION_INGEST`, `AUTOMATION_READ`, `AUTOMATION_ADMIN`).
+
+### 5.3 Test Case Mapping & Unmapped Test Queue
+The mapping service resolves automated test cases to platform `TestCase` entities using a 3-tier deterministic strategy:
+1. **Explicit Annotation Extraction**: Checks test titles or properties for canonical tags (e.g. `@AIQA-101` or `{ type: 'testCaseId', description: '101' }`).
+2. **Persistent External Mapping**: Matches framework-specific identifier pairs (`framework` + `externalId`) in `AutomationTestMapping`.
+3. **Exact Title Matching**: Case-insensitive lookup against active test case titles within the project.
+- **Unmapped Test Queue**: Unmatched automated tests are ingested without data loss into `AutomationUnmappedTest`, tracking execution frequency, framework details, and last seen timestamps.
+- **1-Click Conversion & Linking**: QA engineers can review unmapped tests and either link them to existing manual test cases or automatically generate new formal test cases with one click.
+
+### 5.4 Execution Sessions, Idempotency & Retry Tracking
+- Automated runs are organized into `AutomationSession` records linked directly to canonical `TestRun` entities with `isAutomated: true`.
+- **Idempotency Protection**: Duplicate session creation requests with the same `idempotencyKey` return existing sessions cleanly, preventing duplicate test runs during CI retry cascades.
+- **Retry Attempt Preservation**: When test runners retry flaky tests (e.g. Playwright retries 1, 2), results are recorded with distinct `attemptNumber` values without overwriting prior execution failure evidence.
+
+### 5.5 GitHub Actions & Signed Webhook Ingestion
+- `POST /api/v1/projects/:projectId/automation/webhooks/github` ingests GitHub `workflow_run`, `workflow_job`, and `check_run` events.
+- **HMAC-SHA256 Signature Verification**: Validates the `X-Hub-Signature-256` header against the organization or project webhook secret.
+- **Deduplication**: Ingested webhooks log delivery IDs (`X-GitHub-Delivery`) in `AutomationWebhookEvent` to guarantee idempotent processing.

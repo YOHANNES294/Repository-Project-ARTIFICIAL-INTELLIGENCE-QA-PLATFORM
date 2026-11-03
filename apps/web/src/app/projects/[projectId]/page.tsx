@@ -31,6 +31,7 @@ import {
   ClipboardList,
   PlayCircle,
   Bug,
+  Cpu,
 } from 'lucide-react';
 
 export default function ProjectDetailPage() {
@@ -440,6 +441,22 @@ export default function ProjectDetailPage() {
                   </h4>
                   <p className="text-xs text-slate-500 mt-1">
                     Test generation, failure diagnostics, duplicate detection, risk & executive QA reports
+                  </p>
+                </Link>
+
+                <Link
+                  href={`/projects/${projectId}/automation`}
+                  className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:border-cyan-500 hover:shadow-md transition-all group"
+                >
+                  <div className="p-2.5 rounded-lg bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300 w-fit mb-3 group-hover:scale-105 transition-transform">
+                    <Cpu className="h-5 w-5" />
+                  </div>
+                  <h4 className="font-bold text-slate-900 dark:text-white text-sm flex items-center justify-between">
+                    Automation & CI/CD
+                    <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-cyan-600 transition-colors" />
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Playwright reporter, Newman ingestion, API tokens, test mappings & CI webhooks
                   </p>
                 </Link>
               </div>

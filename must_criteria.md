@@ -111,11 +111,12 @@ Status Legend:
 ---
 
 ## Milestone 08 — Test Automation Integration
-- [ ] Playwright custom reporter package (`integrations/playwright`)
-- [ ] Secure ingestion API for automated test results, screenshots, and traces
-- [ ] Postman / Newman test results ingestion (`integrations/postman`)
-- [ ] GitHub Actions CI workflow integrations with signed webhook verification
-- [ ] Run history and automated result mapping to test case versions
+- [x] Playwright custom reporter package (`integrations/playwright`) with step timing, browser metadata, and attachment streaming
+- [x] Secure ingestion API for automated test results (`/automation/ingest`, `/automation/sessions`) with SHA-256 API token hashing at rest
+- [x] Postman / Newman test results ingestion (`integrations/postman`) with collection schema validation and report parsing
+- [x] GitHub Actions CI workflow integrations with HMAC-SHA256 signed webhook verification and delivery deduplication
+- [x] Run history and automated result mapping to test case versions with retry attempt tracking and unmapped test queue review workbench
+- [x] Investigation & resolution of M07 verification items (Next.js version audit, prompt injection defense review, live vs mock adapter documentation)
 
 ---
 

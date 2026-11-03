@@ -77,3 +77,59 @@ pnpm dev:web
 # Start background worker
 pnpm dev:worker
 ```
+
+---
+
+## 5. Test Automation & CI/CD Integration (Milestone 08)
+
+### Playwright Integration
+The platform provides a dedicated Playwright reporter package in `integrations/playwright`.
+
+1. **Install reporter** in your Playwright project:
+   ```bash
+   pnpm add -D @ai-qa/playwright-reporter
+   ```
+2. **Configure in `playwright.config.ts`**:
+   ```typescript
+   export default defineConfig({
+     reporter: [
+       ['list'],
+       [
+         '@ai-qa/playwright-reporter',
+         {
+           apiUrl: process.env.AIQA_API_URL || 'http://localhost:4000',
+           token: process.env.AIQA_AUTOMATION_TOKEN,
+           projectId: process.env.AIQA_PROJECT_ID,
+           environmentName: 'STAGING',
+           testPlanId: process.env.AIQA_TEST_PLAN_ID, // optional
+         },
+       ],
+     ],
+   });
+   ```
+3. **Map tests** using test title annotations:
+   ```typescript
+   test('@AIQA-101 User should be able to log in successfully', async ({ page }) => {
+     // Test code
+   });
+   ```
+
+A complete reference implementation is available in `examples/playwright-demo`.
+
+### Postman & Newman Integration
+The platform provides a dedicated Postman adapter in `integrations/postman`.
+
+1. Run Newman with the JSON summary reporter:
+   ```bash
+   npx newman run ./collection.json -r cli,json --reporter-json-export ./newman-report.json
+   ```
+2. Upload the report directly to the ingestion API:
+   ```bash
+   curl -X POST "http://localhost:4000/api/v1/projects/$PROJECT_ID/automation/ingest/newman" \
+     -H "Authorization: Bearer $AIQA_AUTOMATION_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d @newman-report.json
+   ```
+
+### GitHub Actions CI Workflow
+Sample workflow configuration is available at `.github/workflows/automation-ci.yml`. Webhook notifications can be sent to `/api/v1/projects/:projectId/automation/webhooks/github` with HMAC-SHA256 signature verification.

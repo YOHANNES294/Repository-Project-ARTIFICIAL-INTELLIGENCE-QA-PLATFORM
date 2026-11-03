@@ -352,3 +352,40 @@ Base route: `/api/v1/projects/:projectId`
 - `GET /qa-report`: Grounded executive QA status summary for release stakeholders. Computes real execution rates, blocker defects, release readiness indicator (`HIGH`, `MEDIUM`, `LOW`), and key quality recommendations.
 - `POST /feedback`: Record human feedback (`HELPFUL`, `NOT_HELPFUL`, `INACCURATE`, `INCOMPLETE`, comments) on AI outputs for quality tracking.
 - `GET /feedback`: Retrieve logged feedback and rating metrics for the project.
+
+---
+
+## 10. Milestone 08 — Automation & CI/CD Integration APIs
+
+Base route: `/api/v1/projects/:projectId/automation`
+
+### 10.1 Overview & Telemetry
+- `GET /overview`: Returns high-level metrics for the automation dashboard: total automated sessions, total mapped tests, pending unmapped tests, active API tokens, and recent sessions.
+
+### 10.2 Automation API Tokens (`/tokens`)
+- `GET /tokens`: List all active and revoked automation tokens for the project (prefixes, creation date, last used date, expiration).
+- `POST /tokens`: Generate a new scoped Automation API Token (`aiqa_auto_<prefix>_<secret>`). The complete secret is returned **only once** upon creation; only the SHA-256 hash is persisted at rest.
+- `DELETE /tokens/:tokenId`: Revoke an automation token, immediately blocking any CI runner attempting to use it.
+
+### 10.3 Ingestion Sessions & Batch Uploads (`/sessions`)
+- `POST /sessions`: Initialize a new automated ingestion session. Supports `Idempotency-Key` header or body parameter to prevent duplicate runs. Automatically creates and links an automated [`TestRun`](file:///c:/Users/Yoni/Documents/Repository%20Project/ARTIFICIAL%20INTELLIGENCE%20QA%20PLATFORM/database/prisma/schema.prisma) (`isAutomated: true`).
+- `GET /sessions`: List all automation execution sessions with pagination and status filters.
+- `GET /sessions/:sessionId`: Retrieve full session details, CI metadata, and test execution statistics.
+- `POST /sessions/:sessionId/results`: Batch ingest test results. Automatically resolves test case mappings, links exact [`TestCaseVersion`](file:///c:/Users/Yoni/Documents/Repository%20Project/ARTIFICIAL%20INTELLIGENCE%20QA%20PLATFORM/database/prisma/schema.prisma) snapshots, creates [`TestResult`](file:///c:/Users/Yoni/Documents/Repository%20Project/ARTIFICIAL%20INTELLIGENCE%20QA%20PLATFORM/database/prisma/schema.prisma) records with retry attempts preserved (`attemptNumber = 1, 2...`), creates execution steps, uploads attachments/screenshots, and records unmapped tests.
+- `POST /sessions/:sessionId/finalize`: Finalize an execution session (`COMPLETED`, `FAILED`, `ABORTED`), atomically completing the linked platform `TestRun`.
+
+### 10.4 1-Step Report Ingestion (`/ingest`)
+- `POST /ingest/newman`: Accepts raw Newman JSON report format (`newman run ... -r json`), parses collections, requests, response times, and assertion outcomes, creates session, ingests results, and finalizes in a single step.
+- `POST /ingest/playwright`: Accepts raw Playwright JSON report (`playwright test --reporter=json`), parses suites, specs, retries, duration, and error stacks, and finalizes the session.
+
+### 10.5 Test Case Mappings & Unmapped Reviews (`/mappings`, `/unmapped`)
+- `GET /mappings`: List mapped tests with search and framework filters (`PLAYWRIGHT`, `NEWMAN`, `GENERIC`).
+- `POST /mappings`: Explicitly map an external test ID to a repository `TestCase`.
+- `PATCH /mappings/:mappingId`: Update mapping attributes or verification status.
+- `DELETE /mappings/:mappingId`: Remove test mapping.
+- `GET /unmapped`: List unmapped tests discovered during automated test runs.
+- `POST /unmapped/:unmappedId/resolve`: Resolve an unmapped test by either linking to an existing `TestCase` or auto-creating a new `TestCase` and mapping it.
+
+### 10.6 Webhooks & CI/CD Triggers (`/webhooks`)
+- `POST /webhooks/github`: Ingests GitHub Actions webhook events (`workflow_run`, `check_run`). Verifies HMAC-SHA256 signature using `X-Hub-Signature-256`. Deduplicates events using `X-GitHub-Delivery` GUID idempotency.
+- `GET /webhooks`: List received webhook event history.

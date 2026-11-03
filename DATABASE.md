@@ -535,3 +535,122 @@
   - `createdAt`, `updatedAt`: DateTime
 - **Constraints & Indexes**:
   - `@@unique([entityType, entityId, model])`
+
+---
+
+## 4. Milestone 08 — Automation & CI/CD Schema Models
+
+### Credentials & Security
+
+#### `AutomationApiToken`
+- Scoped API tokens for CI/CD runners (Playwright, Newman, GitHub Actions).
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `projectId`: UUID (Foreign Key -> `Project`, `onDelete: Cascade`)
+  - `organizationId`: UUID (Foreign Key -> `Organization`, `onDelete: Cascade`)
+  - `name`: String (e.g. "GitHub Actions CI Runner")
+  - `tokenPrefix`: String (e.g. `aiqa_auto_abc12345`)
+  - `tokenHash`: String (Unique SHA-256 hash of raw token)
+  - `scopes`: String[] (Default: `["automation:ingest"]`)
+  - `lastUsedAt`: DateTime?
+  - `expiresAt`: DateTime?
+  - `isRevoked`: Boolean (Default: false)
+  - `revokedAt`: DateTime?
+  - `createdById`: UUID? (Foreign Key -> `User`, `onDelete: SetNull`)
+  - `createdAt`, `updatedAt`: DateTime
+- **Constraints & Indexes**:
+  - `@@unique([tokenHash])`
+  - `@@index([projectId, isRevoked])`
+  - `@@index([organizationId])`
+
+### Test Mappings & Associations
+
+#### `AutomationTestMapping`
+- Mapping between external runner test identifiers and platform TestCases.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `projectId`: UUID (Foreign Key -> `Project`, `onDelete: Cascade`)
+  - `testCaseId`: UUID (Foreign Key -> `TestCase`, `onDelete: Cascade`)
+  - `externalId`: String (Unique external ID, e.g. "tests/auth.spec.ts::User should log in")
+  - `externalTitle`: String
+  - `framework`: String (Default: "PLAYWRIGHT")
+  - `confidence`: Float (Default: 1.0)
+  - `isVerified`: Boolean (Default: true)
+  - `createdAt`, `updatedAt`: DateTime
+- **Constraints & Indexes**:
+  - `@@unique([projectId, externalId])`
+  - `@@index([projectId])`
+  - `@@index([testCaseId])`
+
+### Ingestion Sessions & Webhooks
+
+#### `AutomationSession`
+- Execution session metadata capturing CI context and linking to platform `TestRun`.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `projectId`: UUID (Foreign Key -> `Project`, `onDelete: Cascade`)
+  - `organizationId`: UUID (Foreign Key -> `Organization`, `onDelete: Cascade`)
+  - `testRunId`: UUID? (Foreign Key -> `TestRun`, `onDelete: SetNull`)
+  - `idempotencyKey`: String? (Deduplication token)
+  - `framework`: String (Default: "PLAYWRIGHT")
+  - `status`: String (Default: "INITIALIZED")
+  - `environmentId`: UUID?
+  - `milestoneId`: UUID?
+  - `ciProvider`: String? (e.g. "GITHUB_ACTIONS", "LOCAL")
+  - `ciBuildId`: String?
+  - `ciBuildUrl`: String?
+  - `gitBranch`: String?
+  - `gitCommitSha`: String?
+  - `gitCommitMessage`: String?
+  - `gitAuthor`: String?
+  - `pullRequestNumber`: Int?
+  - `os`: String?
+  - `browser`: String?
+  - `totalTests`: Int (Default: 0)
+  - `passedTests`: Int (Default: 0)
+  - `failedTests`: Int (Default: 0)
+  - `skippedTests`: Int (Default: 0)
+  - `durationMs`: Int (Default: 0)
+  - `metadata`: JSON?
+  - `startedAt`: DateTime (Default: now)
+  - `completedAt`: DateTime?
+  - `createdAt`, `updatedAt`: DateTime
+- **Constraints & Indexes**:
+  - `@@unique([projectId, idempotencyKey])`
+  - `@@index([projectId, status])`
+  - `@@index([organizationId])`
+  - `@@index([testRunId])`
+
+#### `AutomationUnmappedTest`
+- Discovered automated tests executing in CI that are pending manual review and TestCase association.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `sessionId`: UUID (Foreign Key -> `AutomationSession`, `onDelete: Cascade`)
+  - `projectId`: UUID (Foreign Key -> `Project`, `onDelete: Cascade`)
+  - `externalId`: String
+  - `externalTitle`: String
+  - `suiteName`: String?
+  - `framework`: String (Default: "PLAYWRIGHT")
+  - `lastSeenAt`: DateTime (Default: now)
+  - `status`: String (Default: "PENDING")
+  - `resolvedTestCaseId`: UUID?
+  - `createdAt`, `updatedAt`: DateTime
+- **Constraints & Indexes**:
+  - `@@index([projectId, status])`
+  - `@@index([sessionId])`
+
+#### `AutomationWebhookEvent`
+- Immutable log of received CI/CD webhooks (e.g. GitHub Actions).
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `projectId`: UUID (Foreign Key -> `Project`, `onDelete: Cascade`)
+  - `eventId`: String (e.g. `X-GitHub-Delivery` GUID)
+  - `eventType`: String (e.g. "workflow_run")
+  - `signature`: String (Truncated HMAC signature)
+  - `payload`: JSON
+  - `status`: String (Default: "PROCESSED")
+  - `errorMessage`: String?
+  - `receivedAt`: DateTime (Default: now)
+- **Constraints & Indexes**:
+  - `@@unique([projectId, eventId])`
+  - `@@index([projectId, receivedAt])`

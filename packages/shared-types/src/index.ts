@@ -1384,3 +1384,211 @@ export interface AIDuplicateAnalysisDto {
   componentMatch: boolean;
   suggestedAction: 'MARK_DUPLICATE' | 'LINK_RELATED' | 'KEEP_SEPARATE';
 }
+
+// ----------------------------------------------------
+// MILESTONE 08: AUTOMATION & CI/CD INTEGRATION TYPES
+// ----------------------------------------------------
+
+export type AutomationFramework = 'PLAYWRIGHT' | 'NEWMAN' | 'CYPRESS' | 'GENERIC';
+
+export type AutomationSessionStatus = 'INITIALIZED' | 'INGESTING' | 'COMPLETED' | 'FAILED' | 'ABORTED';
+
+export type AutomationTestResultStatus = 'PASSED' | 'FAILED' | 'SKIPPED' | 'TIMED_OUT' | 'BLOCKED';
+
+export interface AutomationApiTokenDto {
+  id: string;
+  projectId: string;
+  organizationId: string;
+  name: string;
+  tokenPrefix: string;
+  scopes: string[];
+  lastUsedAt: string | null;
+  expiresAt: string | null;
+  isRevoked: boolean;
+  revokedAt: string | null;
+  createdAt: string;
+  createdBy?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+}
+
+export interface CreateAutomationTokenResponseDto {
+  token: AutomationApiTokenDto;
+  rawToken: string; // Only displayed once on creation
+}
+
+export interface AutomationTestMappingDto {
+  id: string;
+  projectId: string;
+  testCaseId: string;
+  externalId: string;
+  externalTitle: string;
+  framework: AutomationFramework;
+  confidence: number;
+  isVerified: boolean;
+  createdAt: string;
+  updatedAt: string;
+  testCase?: {
+    id: string;
+    caseNumber: number;
+    title: string;
+    key?: string;
+  };
+}
+
+export interface AutomationUnmappedTestDto {
+  id: string;
+  sessionId: string;
+  projectId: string;
+  externalId: string;
+  externalTitle: string;
+  suiteName: string | null;
+  framework: AutomationFramework;
+  lastSeenAt: string;
+  status: 'PENDING' | 'RESOLVED' | 'IGNORED';
+  resolvedTestCaseId: string | null;
+  createdAt: string;
+}
+
+export interface AutomationSessionDto {
+  id: string;
+  projectId: string;
+  organizationId: string;
+  testRunId: string | null;
+  idempotencyKey: string | null;
+  framework: AutomationFramework;
+  status: AutomationSessionStatus;
+  environmentId: string | null;
+  milestoneId: string | null;
+  ciProvider: string | null;
+  ciBuildId: string | null;
+  ciBuildUrl: string | null;
+  gitBranch: string | null;
+  gitCommitSha: string | null;
+  gitCommitMessage: string | null;
+  gitAuthor: string | null;
+  pullRequestNumber: number | null;
+  os: string | null;
+  browser: string | null;
+  totalTests: number;
+  passedTests: number;
+  failedTests: number;
+  skippedTests: number;
+  durationMs: number;
+  metadata?: Record<string, unknown> | null;
+  startedAt: string;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  testRun?: {
+    id: string;
+    runNumber: number;
+    name: string;
+    status: TestRunStatus;
+  } | null;
+}
+
+export interface AutomationWebhookEventDto {
+  id: string;
+  projectId: string;
+  eventId: string;
+  eventType: string;
+  status: string;
+  errorMessage: string | null;
+  receivedAt: string;
+}
+
+export interface IngestTestResultItemDto {
+  externalId: string;
+  externalTitle: string;
+  suiteHierarchy?: string[];
+  status: AutomationTestResultStatus;
+  durationMs: number;
+  errorMessage?: string | null;
+  stackTrace?: string | null;
+  attemptNumber?: number;
+  isFinalAttempt?: boolean;
+  retryCount?: number;
+  browser?: string | null;
+  os?: string | null;
+  testCaseId?: string | null;
+  defectId?: string | null;
+  attachments?: Array<{
+    fileName: string;
+    contentType: string;
+    dataBase64?: string;
+    fileUrl?: string;
+    type?: string;
+  }>;
+  steps?: Array<{
+    stepNumber: number;
+    title: string;
+    status: AutomationTestResultStatus;
+    durationMs?: number;
+    errorMessage?: string | null;
+  }>;
+}
+
+export interface CreateAutomationTokenInput {
+  name: string;
+  scopes?: string[];
+  expiresAt?: string | null;
+}
+
+export interface CreateAutomationSessionInput {
+  framework?: AutomationFramework;
+  environmentId?: string | null;
+  milestoneId?: string | null;
+  testRunName?: string;
+  idempotencyKey?: string | null;
+  ciProvider?: string | null;
+  ciBuildId?: string | null;
+  ciBuildUrl?: string | null;
+  gitBranch?: string | null;
+  gitCommitSha?: string | null;
+  gitCommitMessage?: string | null;
+  gitAuthor?: string | null;
+  pullRequestNumber?: number | null;
+  os?: string | null;
+  browser?: string | null;
+  metadata?: Record<string, unknown>;
+}
+
+export interface IngestAutomationResultsInput {
+  sessionId: string;
+  results: IngestTestResultItemDto[];
+}
+
+export interface FinalizeAutomationSessionInput {
+  sessionId: string;
+  status?: 'COMPLETED' | 'FAILED' | 'ABORTED';
+  summary?: {
+    totalTests?: number;
+    passedTests?: number;
+    failedTests?: number;
+    skippedTests?: number;
+    durationMs?: number;
+  };
+}
+
+export interface CreateAutomationMappingInput {
+  testCaseId: string;
+  externalId: string;
+  externalTitle: string;
+  framework?: AutomationFramework;
+}
+
+export interface UpdateAutomationMappingInput {
+  testCaseId?: string;
+  externalTitle?: string;
+  isVerified?: boolean;
+}
+
+export interface ResolveUnmappedTestInput {
+  testCaseId?: string | null;
+  createTestCase?: boolean;
+  status: 'RESOLVED' | 'IGNORED';
+}

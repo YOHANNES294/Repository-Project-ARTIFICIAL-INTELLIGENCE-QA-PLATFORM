@@ -106,3 +106,28 @@
 - **Cost & Quota Governance**:
   - Every LLM invocation logs prompt tokens, completion tokens, latency, and estimated cost in `AIUsageLog`.
   - Configurable rate limits (`rateLimitPerMinute`, `rateLimitPerDay`) enforce hard caps to prevent runaway consumption or denial-of-wallet attacks.
+
+---
+
+## 10. Milestone 08 — Automation & CI/CD Security
+
+- **SHA-256 One-Way API Token Hashing**:
+  - Automation ingestion tokens (`aiqa_auto_...`) are generated using 32 bytes of cryptographically secure random entropy (`crypto.randomBytes(32)`).
+  - Raw tokens are returned to the user exactly once upon initial creation and are **never** stored in plaintext.
+  - The database only stores a one-way SHA-256 hash (`tokenHash`) and a truncated display mask (`tokenMask`, e.g. `aiqa_auto_...382a`).
+  - Constant-time hashing comparison is used to validate incoming tokens against database hashes, protecting against timing side-channel attacks.
+- **Granular Token Scopes & Expiration**:
+  - Tokens are scoped to a specific project (`projectId`) and organization (`organizationId`).
+  - Scopes (`AUTOMATION_INGEST`, `AUTOMATION_READ`, `AUTOMATION_ADMIN`) restrict token capabilities; ingestion tokens cannot perform administrative or cross-tenant modifications.
+  - Tokens can be instantly revoked (`isRevoked: true`), and expired tokens are rejected immediately with HTTP 401.
+- **HMAC-SHA256 Webhook Signature Verification**:
+  - GitHub Actions webhooks (`/automation/webhooks/github`) require an `X-Hub-Signature-256` header.
+  - The backend computes the HMAC-SHA256 digest of the raw request payload using the project webhook secret and performs a constant-time comparison via `crypto.timingSafeEqual()`. Requests with mismatched signatures are rejected with HTTP 401.
+- **Webhook Delivery Deduplication & Replay Protection**:
+  - Delivery identifiers (`X-GitHub-Delivery`) are recorded in `AutomationWebhookEvent`.
+  - Duplicate delivery attempts are recognized and acknowledged without duplicate processing or unintended state changes.
+- **External Runner Isolation & Code Execution Defense**:
+  - Customer test code, Playwright specifications, Newman collections, and arbitrary scripts are never executed within the SaaS backend or worker nodes.
+  - All ingestion endpoints enforce strict schema validation via Zod, rejecting payloads containing unexpected properties or unauthorized script injections.
+- **Tenant Isolation on Automated Assets**:
+  - Test case mappings, automation sessions, unmapped tests, and webhook audit records enforce compound foreign key checks against `projectId` and `organizationId`, preventing cross-tenant leakage.

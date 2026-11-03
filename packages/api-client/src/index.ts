@@ -73,6 +73,19 @@ import {
   BatchReviewAIGenerationItemsInput,
   SubmitAIFeedbackInput,
   AITaskType,
+  AutomationApiTokenDto,
+  CreateAutomationTokenResponseDto,
+  CreateAutomationTokenInput,
+  AutomationSessionDto,
+  CreateAutomationSessionInput,
+  FinalizeAutomationSessionInput,
+  IngestTestResultItemDto,
+  AutomationTestMappingDto,
+  CreateAutomationMappingInput,
+  UpdateAutomationMappingInput,
+  AutomationUnmappedTestDto,
+  ResolveUnmappedTestInput,
+  AutomationWebhookEventDto,
 } from '@ai-qa/shared-types';
 
 export interface ProjectListParams {
@@ -152,6 +165,36 @@ export class ApiClient {
     }
 
     return json.data as T;
+  }
+
+  private async requestWithMeta<T>(path: string, options: RequestInit = {}): Promise<{ data: T; meta?: any }> {
+    const url = `${this.baseUrl}${path.startsWith('/') ? path : `/${path}`}`;
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    };
+
+    const res = await fetch(url, {
+      ...options,
+      headers,
+      credentials: options.credentials || 'include',
+    });
+
+    const json = (await res.json()) as ApiResponse<T>;
+
+    if (!res.ok || !json.success) {
+      const errorMsg = json.error?.message || `Request failed with status ${res.status}`;
+      const error = new Error(errorMsg) as Error & { code?: string; details?: unknown; status: number };
+      error.code = json.error?.code;
+      error.details = json.error?.details;
+      error.status = res.status;
+      throw error;
+    }
+
+    return {
+      data: json.data as T,
+      meta: json.meta,
+    };
   }
 
   async getHealth(): Promise<HealthCheckResponse> {
@@ -1189,6 +1232,262 @@ export class ApiClient {
     return this.request<AIFeedbackDto[]>(
       `/projects/${projectId}/ai/generations/${generationId}/feedback`
     );
+  }
+
+  // ----------------------------------------------------
+  // MILESTONE 08: AUTOMATION & CI/CD CLIENT METHODS
+  // ----------------------------------------------------
+
+  async getAutomationOverview(projectId: string): Promise<{
+    totalSessions: number;
+    totalMappings: number;
+    totalUnmapped: number;
+    activeTokens: number;
+    recentSessions: AutomationSessionDto[];
+  }> {
+    return this.request<{
+      totalSessions: number;
+      totalMappings: number;
+      totalUnmapped: number;
+      activeTokens: number;
+      recentSessions: AutomationSessionDto[];
+    }>(`/projects/${projectId}/automation/overview`);
+  }
+
+  async getAutomationTokens(projectId: string): Promise<AutomationApiTokenDto[]> {
+    return this.request<AutomationApiTokenDto[]>(`/projects/${projectId}/automation/tokens`);
+  }
+
+  async createAutomationToken(
+    projectId: string,
+    payload: CreateAutomationTokenInput
+  ): Promise<CreateAutomationTokenResponseDto> {
+    return this.request<CreateAutomationTokenResponseDto>(
+      `/projects/${projectId}/automation/tokens`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }
+    );
+  }
+
+  async revokeAutomationToken(
+    projectId: string,
+    tokenId: string
+  ): Promise<AutomationApiTokenDto> {
+    return this.request<AutomationApiTokenDto>(
+      `/projects/${projectId}/automation/tokens/${tokenId}`,
+      { method: 'DELETE' }
+    );
+  }
+
+  async getAutomationSessions(
+    projectId: string,
+    params: { page?: number; limit?: number; status?: string } = {}
+  ): Promise<{ sessions: AutomationSessionDto[]; meta: any }> {
+    const query = new URLSearchParams();
+    if (params.page) query.set('page', params.page.toString());
+    if (params.limit) query.set('limit', params.limit.toString());
+    if (params.status) query.set('status', params.status);
+
+    const qs = query.toString();
+    const endpoint = `/projects/${projectId}/automation/sessions${qs ? `?${qs}` : ''}`;
+
+    const res = await this.requestWithMeta<AutomationSessionDto[]>(endpoint);
+    return {
+      sessions: res.data,
+      meta: res.meta,
+    };
+  }
+
+  async getAutomationSession(
+    projectId: string,
+    sessionId: string
+  ): Promise<AutomationSessionDto> {
+    return this.request<AutomationSessionDto>(
+      `/projects/${projectId}/automation/sessions/${sessionId}`
+    );
+  }
+
+  async createAutomationSession(
+    projectId: string,
+    payload: CreateAutomationSessionInput
+  ): Promise<AutomationSessionDto> {
+    return this.request<AutomationSessionDto>(
+      `/projects/${projectId}/automation/sessions`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }
+    );
+  }
+
+  async ingestAutomationResults(
+    projectId: string,
+    sessionId: string,
+    results: IngestTestResultItemDto[]
+  ): Promise<{ processedCount: number; unmappedCount: number; session: AutomationSessionDto }> {
+    return this.request<{
+      processedCount: number;
+      unmappedCount: number;
+      session: AutomationSessionDto;
+    }>(`/projects/${projectId}/automation/sessions/${sessionId}/results`, {
+      method: 'POST',
+      body: JSON.stringify({ results }),
+    });
+  }
+
+  async finalizeAutomationSession(
+    projectId: string,
+    sessionId: string,
+    payload: FinalizeAutomationSessionInput = { sessionId }
+  ): Promise<AutomationSessionDto> {
+    return this.request<AutomationSessionDto>(
+      `/projects/${projectId}/automation/sessions/${sessionId}/finalize`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }
+    );
+  }
+
+  async ingestNewmanReport(
+    projectId: string,
+    report: any
+  ): Promise<{ session: AutomationSessionDto; totalItems: number; processed: number; unmapped: number }> {
+    return this.request<{
+      session: AutomationSessionDto;
+      totalItems: number;
+      processed: number;
+      unmapped: number;
+    }>(`/projects/${projectId}/automation/ingest/newman`, {
+      method: 'POST',
+      body: JSON.stringify(report),
+    });
+  }
+
+  async ingestPlaywrightReport(
+    projectId: string,
+    report: any
+  ): Promise<{ session: AutomationSessionDto; totalItems: number; processed: number; unmapped: number }> {
+    return this.request<{
+      session: AutomationSessionDto;
+      totalItems: number;
+      processed: number;
+      unmapped: number;
+    }>(`/projects/${projectId}/automation/ingest/playwright`, {
+      method: 'POST',
+      body: JSON.stringify(report),
+    });
+  }
+
+  async getAutomationMappings(
+    projectId: string,
+    params: { framework?: string; search?: string; page?: number; limit?: number } = {}
+  ): Promise<{ mappings: AutomationTestMappingDto[]; meta: any }> {
+    const query = new URLSearchParams();
+    if (params.framework) query.set('framework', params.framework);
+    if (params.search) query.set('search', params.search);
+    if (params.page) query.set('page', params.page.toString());
+    if (params.limit) query.set('limit', params.limit.toString());
+
+    const qs = query.toString();
+    const endpoint = `/projects/${projectId}/automation/mappings${qs ? `?${qs}` : ''}`;
+
+    const res = await this.requestWithMeta<AutomationTestMappingDto[]>(endpoint);
+    return {
+      mappings: res.data,
+      meta: res.meta,
+    };
+  }
+
+  async createAutomationMapping(
+    projectId: string,
+    payload: CreateAutomationMappingInput
+  ): Promise<AutomationTestMappingDto> {
+    return this.request<AutomationTestMappingDto>(
+      `/projects/${projectId}/automation/mappings`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }
+    );
+  }
+
+  async updateAutomationMapping(
+    projectId: string,
+    mappingId: string,
+    payload: UpdateAutomationMappingInput
+  ): Promise<AutomationTestMappingDto> {
+    return this.request<AutomationTestMappingDto>(
+      `/projects/${projectId}/automation/mappings/${mappingId}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      }
+    );
+  }
+
+  async deleteAutomationMapping(
+    projectId: string,
+    mappingId: string
+  ): Promise<{ message: string }> {
+    return this.request<{ message: string }>(
+      `/projects/${projectId}/automation/mappings/${mappingId}`,
+      { method: 'DELETE' }
+    );
+  }
+
+  async getAutomationUnmappedTests(
+    projectId: string,
+    params: { sessionId?: string; status?: string; page?: number; limit?: number } = {}
+  ): Promise<{ unmapped: AutomationUnmappedTestDto[]; meta: any }> {
+    const query = new URLSearchParams();
+    if (params.sessionId) query.set('sessionId', params.sessionId);
+    if (params.status) query.set('status', params.status);
+    if (params.page) query.set('page', params.page.toString());
+    if (params.limit) query.set('limit', params.limit.toString());
+
+    const qs = query.toString();
+    const endpoint = `/projects/${projectId}/automation/unmapped${qs ? `?${qs}` : ''}`;
+
+    const res = await this.requestWithMeta<AutomationUnmappedTestDto[]>(endpoint);
+    return {
+      unmapped: res.data,
+      meta: res.meta,
+    };
+  }
+
+  async resolveAutomationUnmappedTest(
+    projectId: string,
+    unmappedId: string,
+    payload: ResolveUnmappedTestInput
+  ): Promise<AutomationTestMappingDto | { status: string }> {
+    return this.request<AutomationTestMappingDto | { status: string }>(
+      `/projects/${projectId}/automation/unmapped/${unmappedId}/resolve`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }
+    );
+  }
+
+  async getAutomationWebhooks(
+    projectId: string,
+    params: { page?: number; limit?: number } = {}
+  ): Promise<{ events: AutomationWebhookEventDto[]; meta: any }> {
+    const query = new URLSearchParams();
+    if (params.page) query.set('page', params.page.toString());
+    if (params.limit) query.set('limit', params.limit.toString());
+
+    const qs = query.toString();
+    const endpoint = `/projects/${projectId}/automation/webhooks${qs ? `?${qs}` : ''}`;
+
+    const res = await this.requestWithMeta<AutomationWebhookEventDto[]>(endpoint);
+    return {
+      events: res.data,
+      meta: res.meta,
+    };
   }
 }
 

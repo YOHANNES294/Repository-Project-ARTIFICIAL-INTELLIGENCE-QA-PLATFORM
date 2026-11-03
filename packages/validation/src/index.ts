@@ -701,3 +701,134 @@ export type GenerateQAReportInput = z.infer<typeof generateQAReportSchema>;
 export type ReviewAIGenerationItemInput = z.infer<typeof reviewAIGenerationItemSchema>;
 export type BatchReviewAIGenerationItemsInput = z.infer<typeof batchReviewAIGenerationItemsSchema>;
 export type SubmitAIFeedbackInput = z.infer<typeof submitAIFeedbackSchema>;
+
+// ----------------------------------------------------
+// MILESTONE 08: AUTOMATION & CI/CD SCHEMAS
+// ----------------------------------------------------
+
+export const automationFrameworkEnum = z.enum([
+  'PLAYWRIGHT',
+  'NEWMAN',
+  'CYPRESS',
+  'GENERIC',
+]);
+
+export const automationSessionStatusEnum = z.enum([
+  'INITIALIZED',
+  'INGESTING',
+  'COMPLETED',
+  'FAILED',
+  'ABORTED',
+]);
+
+export const automationTestResultStatusEnum = z.enum([
+  'PASSED',
+  'FAILED',
+  'SKIPPED',
+  'TIMED_OUT',
+  'BLOCKED',
+]);
+
+export const createAutomationTokenSchema = z.object({
+  name: z.string().min(2, 'Token name must be at least 2 characters').max(100).trim(),
+  scopes: z.array(z.string()).default(['automation:ingest']),
+  expiresAt: z.string().datetime().nullable().optional(),
+});
+
+export const createAutomationSessionSchema = z.object({
+  framework: automationFrameworkEnum.default('PLAYWRIGHT'),
+  environmentId: z.string().uuid('Invalid environment ID').nullable().optional(),
+  milestoneId: z.string().uuid('Invalid milestone ID').nullable().optional(),
+  testRunName: z.string().max(255).optional(),
+  idempotencyKey: z.string().max(255).nullable().optional(),
+  ciProvider: z.string().max(100).nullable().optional(),
+  ciBuildId: z.string().max(255).nullable().optional(),
+  ciBuildUrl: z.string().url().max(1000).nullable().optional(),
+  gitBranch: z.string().max(255).nullable().optional(),
+  gitCommitSha: z.string().max(100).nullable().optional(),
+  gitCommitMessage: z.string().max(1000).nullable().optional(),
+  gitAuthor: z.string().max(255).nullable().optional(),
+  pullRequestNumber: z.number().int().positive().nullable().optional(),
+  os: z.string().max(100).nullable().optional(),
+  browser: z.string().max(100).nullable().optional(),
+  metadata: z.record(z.any()).optional(),
+});
+
+export const ingestTestResultStepSchema = z.object({
+  stepNumber: z.number().int().positive(),
+  title: z.string().max(500),
+  status: automationTestResultStatusEnum,
+  durationMs: z.number().int().nonnegative().optional(),
+  errorMessage: z.string().max(5000).nullable().optional(),
+});
+
+export const ingestTestResultAttachmentSchema = z.object({
+  fileName: z.string().max(255),
+  contentType: z.string().max(100),
+  dataBase64: z.string().optional(),
+  fileUrl: z.string().optional(),
+  type: z.string().optional(),
+});
+
+export const ingestTestResultItemSchema = z.object({
+  externalId: z.string().min(1, 'External test ID is required').max(500),
+  externalTitle: z.string().min(1, 'External test title is required').max(1000),
+  suiteHierarchy: z.array(z.string().max(255)).default([]),
+  status: automationTestResultStatusEnum,
+  durationMs: z.number().int().nonnegative().default(0),
+  errorMessage: z.string().max(20000).nullable().optional(),
+  stackTrace: z.string().max(50000).nullable().optional(),
+  attemptNumber: z.number().int().positive().default(1),
+  isFinalAttempt: z.boolean().default(true),
+  retryCount: z.number().int().nonnegative().default(0),
+  browser: z.string().max(100).nullable().optional(),
+  os: z.string().max(100).nullable().optional(),
+  testCaseId: z.string().max(100).nullable().optional(),
+  defectId: z.string().max(100).nullable().optional(),
+  attachments: z.array(ingestTestResultAttachmentSchema).default([]),
+  steps: z.array(ingestTestResultStepSchema).default([]),
+});
+
+export const ingestAutomationResultsSchema = z.object({
+  sessionId: z.string().uuid('Invalid session ID'),
+  results: z.array(ingestTestResultItemSchema).min(1, 'At least one test result must be provided').max(1000),
+});
+
+export const finalizeAutomationSessionSchema = z.object({
+  sessionId: z.string().uuid('Invalid session ID'),
+  status: z.enum(['COMPLETED', 'FAILED', 'ABORTED']).default('COMPLETED'),
+  summary: z.object({
+    totalTests: z.number().int().nonnegative().optional(),
+    passedTests: z.number().int().nonnegative().optional(),
+    failedTests: z.number().int().nonnegative().optional(),
+    skippedTests: z.number().int().nonnegative().optional(),
+    durationMs: z.number().int().nonnegative().optional(),
+  }).optional(),
+});
+
+export const createAutomationMappingSchema = z.object({
+  testCaseId: z.string().uuid('Invalid test case ID'),
+  externalId: z.string().min(1, 'External ID is required').max(500),
+  externalTitle: z.string().min(1, 'External title is required').max(1000),
+  framework: automationFrameworkEnum.default('PLAYWRIGHT'),
+});
+
+export const updateAutomationMappingSchema = z.object({
+  testCaseId: z.string().uuid('Invalid test case ID').optional(),
+  externalTitle: z.string().max(1000).optional(),
+  isVerified: z.boolean().optional(),
+});
+
+export const resolveUnmappedTestSchema = z.object({
+  testCaseId: z.string().uuid('Invalid test case ID').nullable().optional(),
+  createTestCase: z.boolean().default(false),
+  status: z.enum(['RESOLVED', 'IGNORED']).default('RESOLVED'),
+});
+
+export type CreateAutomationTokenInput = z.infer<typeof createAutomationTokenSchema>;
+export type CreateAutomationSessionInput = z.infer<typeof createAutomationSessionSchema>;
+export type IngestAutomationResultsInput = z.infer<typeof ingestAutomationResultsSchema>;
+export type FinalizeAutomationSessionInput = z.infer<typeof finalizeAutomationSessionSchema>;
+export type CreateAutomationMappingInput = z.infer<typeof createAutomationMappingSchema>;
+export type UpdateAutomationMappingInput = z.infer<typeof updateAutomationMappingSchema>;
+export type ResolveUnmappedTestInput = z.infer<typeof resolveUnmappedTestSchema>;

@@ -2,8 +2,19 @@
   "name": "@ai-qa/postman-adapter",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "build": "echo Postman adapter ready"
+    "build": "tsc -b",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@ai-qa/shared-types": "workspace:*"
+  },
+  "devDependencies": {
+    "@ai-qa/config": "workspace:*",
+    "@types/node": "^22.13.5",
+    "typescript": "^5.7.3"
   }
 }

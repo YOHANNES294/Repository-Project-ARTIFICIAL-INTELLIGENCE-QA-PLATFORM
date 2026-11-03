@@ -2,6 +2,45 @@
 
 All notable changes to the Artificial Intelligence QA Platform will be documented here.
 
+## [0.8.0] - Milestone 08 Completion: Automation & CI/CD Integration
+### Added
+- **External Runner Architecture & Isolation**:
+  - Isolated SaaS backend from arbitrary customer test execution; tests run on customer CI/CD environments.
+  - Ingestion APIs validate incoming JSON payloads with strict Zod schemas.
+- **Playwright Custom Reporter (`@ai-qa/playwright-reporter`)**:
+  - Reusable reporter package in `integrations/playwright` streaming test outcomes, step execution times, retry counts, errors, stack traces, browser/OS metadata, and attachments.
+  - Reference implementation in `examples/playwright-demo/` with sample tests and Playwright config.
+- **Postman & Newman Integration (`@ai-qa/postman-adapter`)**:
+  - Collection validator and report parser in `integrations/postman`.
+  - Direct report ingestion endpoint `POST /api/v1/projects/:projectId/automation/ingest/newman`.
+- **Deterministic Test Case Mapping Engine**:
+  - 3-tier matching strategy: Explicit test title annotation (`@AIQA-101`), persistent framework identifier mapping (`AutomationTestMapping`), and exact case-insensitive title matching.
+  - Unmapped test queue (`AutomationUnmappedTest`) tracking occurrences with 1-click test case creation or manual linking workbench.
+- **Secure Automation Tokens & Ingestion Sessions**:
+  - Project-scoped tokens (`AutomationApiToken`) prefixed with `aiqa_auto_` and hashed at rest using SHA-256 (`tokenHash`).
+  - Execution sessions (`AutomationSession`) linked directly to `TestRun` (`isAutomated: true`) with `idempotencyKey` deduplication.
+  - Multi-attempt retry preservation (`attemptNumber = 1, 2...`) without overwriting historical execution data.
+- **GitHub Actions & Signed Webhooks**:
+  - Webhook endpoint `POST /api/v1/projects/:projectId/automation/webhooks/github` with HMAC-SHA256 signature verification (`X-Hub-Signature-256`) and delivery deduplication (`X-GitHub-Delivery`).
+  - Production-ready sample workflow in `.github/workflows/automation-ci.yml`.
+- **Resolved M07 Verification Items**:
+  - Next.js version verified: running latest available Next.js 15.5.28 with React 19 (`next@^15.2.0`).
+  - Prompt injection protection verified: `PromptSanitizer` audited with credential redaction and delimiter neutralization.
+  - Live vs mock adapters documented: `MockAIAdapter` utilized for deterministic offline CI; cloud adapters configured for production AES-256-GCM encrypted credentials.
+- **Next.js 16 Automation Workbench**:
+  - Automation Hub Dashboard (`/projects/[projectId]/automation`).
+  - API Tokens Manager (`/projects/[projectId]/automation/tokens`).
+  - Test Mappings Workbench (`/projects/[projectId]/automation/mappings`).
+  - Unmapped Review Workbench (`/projects/[projectId]/automation/unmapped`).
+  - Execution Sessions History (`/projects/[projectId]/automation/sessions`).
+  - Integration Setup Guides (`/projects/[projectId]/automation/setup`).
+  - Project Overview QA Hub quick navigation card.
+- **Automated Verification**:
+  - 20 new automated tests in `test/automation.test.ts` covering tokens, SHA-256 hashing, test mapping resolution, unmapped test queue, sessions, batch result ingestion, report parsers, and HMAC webhook verification.
+  - Full API test suite: 17 test files passed, 119 tests passed, 0 failures.
+  - Monorepo test suite: 125 passed tests, 0 failures across all packages.
+  - Production build clean across all packages (`pnpm -r build` exit code 0).
+
 ## [0.7.0] - Milestone 07 Completion: AI Intelligence Engine
 ### Added
 - **Provider-Agnostic AI Gateway & Adapters**:

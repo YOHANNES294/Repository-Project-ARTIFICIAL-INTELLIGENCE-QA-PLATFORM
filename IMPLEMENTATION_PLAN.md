@@ -45,13 +45,13 @@ ARTIFICIAL INTELLIGENCE QA PLATFORM/
 | **05** | Test Planning & Execution | Completed | 17 / 17 Passing | Clean |
 | **06** | Defect & Bug Tracking | Completed | 14 / 14 Passing | Clean |
 | **07** | AI Intelligence Engine | Completed | 18 / 18 Passing | Clean |
-| **08** | Test Automation Integration | Planned (Next) | - | - |
-| **09** | Quality Analytics & Reporting | Planned | - | - |
+| **08** | Test Automation Integration | Completed | 20 / 20 Passing | Clean |
+| **09** | Quality Analytics & Reporting | Planned (Next) | - | - |
 | **10** | Integrations & Webhooks | Planned | - | - |
 | **11** | Enterprise Audit & Security Hardening | Planned | - | - |
 | **12** | Production Deployment & Launch Readiness | Planned | - | - |
 
-**Total Monorepo Automated Tests:** 105 passing across 18 test suites (99 in `apps/api`, 4 in `packages/validation`, 2 in `apps/worker`).
+**Total Monorepo Automated Tests:** 125 passing across 19 test suites (119 in `apps/api`, 4 in `packages/validation`, 2 in `apps/worker`).
 
 ---
 
@@ -217,21 +217,40 @@ ARTIFICIAL INTELLIGENCE QA PLATFORM/
   - 100% passing across 16 test files and 99 automated tests in `apps/api` (105 tests monorepo-wide).
   - 0 type check errors across all packages and Next.js 16 production build (`pnpm -r build`).
 
+### Milestone 08 — Test Automation & CI/CD Integration
+- **External Runner Architecture**:
+  - Main API and worker processes isolated from executing customer test code. Execution takes place on external CI/CD runners.
+  - Results ingested through authenticated, schema-validated REST APIs.
+- **Playwright Reporter Package (`@ai-qa/playwright-reporter`)**:
+  - Custom reporter in `integrations/playwright` streaming real-time test outcomes, step execution times, browser/OS metadata, and attachments.
+  - Reference implementation and example test suite in `examples/playwright-demo/`.
+- **Postman & Newman Integration (`@ai-qa/postman-adapter`)**:
+  - Direct JSON summary report ingestion endpoint (`/automation/ingest/newman`).
+  - Collection validator and sanitizer utility.
+- **Deterministic Test Case Mapping Engine**:
+  - 3-tier matching strategy: Explicit test title annotation (`@AIQA-101`), persistent framework identifier mapping (`AutomationTestMapping`), and exact case-insensitive title matching.
+  - Unmapped test queue (`AutomationUnmappedTest`) tracking occurrences with 1-click test case creation or manual linking workbench.
+- **Secure Automation Ingestion API & Tokens**:
+  - Scoped project tokens (`aiqa_auto_...`) with one-way SHA-256 hash storage at rest (`tokenHash`), prefix masking (`tokenMask`), and instant revocation.
+  - Execution sessions (`AutomationSession`) linked directly to `TestRun` (`isAutomated: true`) with `idempotencyKey` deduplication.
+  - Multi-attempt retry preservation (`attemptNumber = 1, 2...`) without overwriting historical execution data.
+- **GitHub Actions & Signed Webhooks**:
+  - Webhook endpoint (`/automation/webhooks/github`) with HMAC-SHA256 signature verification (`X-Hub-Signature-256`) and delivery deduplication (`X-GitHub-Delivery`).
+  - Production-ready sample workflow in `.github/workflows/automation-ci.yml`.
+- **Outstanding M07 Verification Items Resolved**:
+  - Next.js version verified: running latest available Next.js 15.5.28 with React 19 (`next@^15.2.0`).
+  - Prompt injection protection verified: `PromptSanitizer` audited with credential redaction and delimiter neutralization.
+  - Live vs mock adapters documented: `MockAIAdapter` utilized for deterministic offline CI; cloud adapters configured for production AES-256-GCM encrypted credentials.
+- **Next.js 16 Automation Workbench**:
+  - Dedicated workbench under `/projects/[projectId]/automation/`: Hub Dashboard, API Tokens, Test Mappings, Unmapped Reviews, Sessions, and Setup Guides.
+  - Project Overview QA Hub quick navigation card.
+- **Verification**:
+  - 100% passing across 17 test files and 119 automated tests in `apps/api` (125 tests monorepo-wide).
+  - 0 type check errors across all packages and Next.js 16 production build (`pnpm -r build`).
+
 ---
 
-## 5. Upcoming Milestone Roadmap (07 — 12)
-
-### Milestone 07 — AI Intelligence Engine
-- **Provider-Agnostic AI Gateway**: Standardized adapter interface supporting OpenAI, Anthropic Claude, and Google Gemini with streaming and fallback.
-- **Autonomous Test Case Generator**: Generate structured test cases from user stories, PRDs, and API schemas.
-- **Failure Cause Analyzer**: Parse stack traces, console logs, and DOM snapshots to produce root cause summaries and suggested fixes.
-- **Test Suite Optimization**: Identify redundant, overlapping, or brittle test cases across large repositories.
-- **Security & Safety**: Prompt injection filtering, token budget limits, and sensitive data redaction.
-
-### Milestone 08 — Test Automation Integration
-- **CLI & Reporters**: Playwright custom reporter and Cypress plugin streaming automated test results directly to platform APIs.
-- **Automated Run Ingestion**: High-throughput `/api/v1/automation/runs` endpoint with JUnit XML, Cucumber JSON, and native JSON ingestion.
-- **Flakiness Detection**: Automatic calculation of test flakiness scores based on historical execution variance.
+## 5. Upcoming Milestone Roadmap (09 — 12)
 
 ### Milestone 09 — Intelligent Quality Analytics & Reporting
 - **Real-Time Quality Dashboards**: Test execution velocity, pass/fail trends, milestone readiness scores, and defect density heatmaps.
