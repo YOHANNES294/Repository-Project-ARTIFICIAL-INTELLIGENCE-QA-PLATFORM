@@ -389,3 +389,104 @@ Base route: `/api/v1/projects/:projectId/automation`
 ### 10.6 Webhooks & CI/CD Triggers (`/webhooks`)
 - `POST /webhooks/github`: Ingests GitHub Actions webhook events (`workflow_run`, `check_run`). Verifies HMAC-SHA256 signature using `X-Hub-Signature-256`. Deduplicates events using `X-GitHub-Delivery` GUID idempotency.
 - `GET /webhooks`: List received webhook event history.
+
+
+---
+
+## 11. Advanced Analytics & Reporting Endpoints
+
+**Base Path:** `/api/v1/projects/:projectId/analytics`  
+**Authentication:** Required (`Bearer` access token in cookie or header).  
+**Authorization:** RBAC enforced; scoped to the user's current active organization and project.
+
+### 11.1 Executive QA Dashboard
+- `GET /executive`: Returns high-level executive metrics for leadership and release sign-off:
+  - Overall test pass rate %, failure rate %, and execution volume
+  - Test case counts and execution coverage percentage
+  - Open, critical, and high defect counts with defect resolution rate %
+  - Automation pass rate and automated execution count
+  - Release readiness score (0–100%) and advisory verdict (`READY`, `WARNING`, `NOT_READY`)
+  - Previous period trend deltas (`passRateDelta`, `defectDelta`, `coverageDelta`, `executionVolumeDelta`)
+  - Query parameters: `startDate`, `endDate`, `environmentId`, `milestoneId`
+
+### 11.2 Detailed Execution Analytics
+- `GET /executions`: Comprehensive execution activity and reliability diagnostics:
+  - Status summary (passed, failed, blocked, skipped, pass rate, avg duration)
+  - Daily time-series trends (outcomes per day)
+  - Environment outcome breakdown
+  - Test suite performance leaderboard
+  - **Flaky Test Candidates**: Identified by outcome flip algorithm across consecutive runs, complete with flip counts and flakiness scores
+  - **Repeated Consecutive Failures**: Identified persistent failure streaks across execution attempts
+  - Tester workload leaderboard (executions, pass/fail counts, pass rates)
+  - Query parameters: `startDate`, `endDate`, `environmentId`, `milestoneId`
+
+### 11.3 Multi-Dimensional Coverage Matrix
+- `GET /coverage`: 4-pillar test coverage analytics:
+  - **Existence Coverage**: Active, draft, and deprecated test cases
+  - **Execution Coverage**: Executed eligible cases vs total active cases
+  - **Requirement Coverage**: Cases mapped to requirement reference IDs (`requirementRef`)
+  - **Automation Coverage**: Automated cases with code mappings vs total active cases
+  - Suite coverage breakdown table
+  - Milestone coverage breakdown table
+  - Query parameter: `milestoneId`
+
+### 11.4 Defect Lifecycle & MTTR Analytics
+- `GET /defects`: Deep defect operational metrics:
+  - Summary: Total created, resolved, open count, closed count, reopen rate %, critical/high counts
+  - Mean Time to Repair (MTTR): Average resolution time in hours
+  - Severity and priority distribution percentages
+  - **Defect Aging Buckets**: Active open defects categorized by duration (`< 3 days`, `3–7 days`, `8–14 days`, `15–30 days`, `> 30 days`)
+  - Component, environment, and milestone breakdowns
+  - **Test Traceability Rate**: Proportion of defects linked directly to test executions or test cases
+  - Query parameters: `startDate`, `endDate`, `environmentId`, `milestoneId`, `component`
+
+### 11.5 CI/CD Automation Analytics (M08 Integration)
+- `GET /automation`: Ingested CI/CD execution metrics:
+  - Session counts (total, completed, failed)
+  - Real test outcome pass rate % (distinguishing platform ingestion success from test assertion success)
+  - Framework breakdown (Playwright, Cypress, Jest, Newman)
+  - Browser matrix breakdown (Chromium, Firefox, WebKit)
+  - CI provider distribution (GitHub Actions, GitLab CI, Jenkins, CircleCI)
+  - Query parameters: `startDate`, `endDate`, `framework`, `ciProvider`
+
+### 11.6 Milestone Release Governance & Quality Gates
+- `GET /milestones/:milestoneId`: Computes release readiness score and rule-by-rule quality gate verification:
+  - Milestone test run progress, total cases, pass rate, open defects, critical defects
+  - Evaluates against active `ProjectQualityGate` policy
+  - Returns rule results (min pass rate, max critical defects, max high defects, min coverage, zero blockers)
+  - Release recommendation verdict: `READY_FOR_RELEASE`, `WARNING_NEEDS_REVIEW`, `BLOCKED_DO_NOT_RELEASE`
+- `GET /quality-gates`: List configured quality gate policies for the project.
+- `POST /quality-gates`: Create a custom quality gate policy with configurable thresholds.
+- `PUT /quality-gates/:gateId`: Update quality gate thresholds and enforcement rules.
+- `DELETE /quality-gates/:gateId`: Remove quality gate policy.
+
+### 11.7 AI Intelligence & Cost Telemetry (M07 Integration)
+- `GET /ai`: Generative AI performance and usage analytics:
+  - Generation volume, total proposed test cases, accepted cases, rejected cases
+  - Human acceptance rate %
+  - Token consumption (prompt + completion) and estimated USD billing cost
+  - Task breakdown by feature (generation, RCA, duplicate detection, risk analysis)
+  - Provider and model telemetry (calls, tokens, cost, latency, errors)
+  - QA user satisfaction ratings (helpful count, not helpful count, satisfaction rate)
+  - Query parameters: `startDate`, `endDate`, `provider`
+
+### 11.8 Custom Reports, Snapshots & Schedules
+- `GET /reports`: List saved report definitions.
+- `POST /reports`: Create a new custom report definition with metric selections and filters.
+- `GET /reports/:reportId`: Retrieve a specific report definition.
+- `PUT /reports/:reportId`: Update an existing report definition.
+- `DELETE /reports/:reportId`: Delete a report definition.
+- `POST /reports/run`: Dynamically execute and calculate report data based on report type and filter payload.
+- `GET /reports/snapshots/list`: List frozen historical report snapshots.
+- `POST /reports/snapshots`: Create an immutable point-in-time snapshot of report data for audit trails.
+- `GET /reports/snapshots/:snapshotId`: Retrieve frozen snapshot data.
+- `GET /reports/schedules/list`: List automated report schedules.
+- `POST /reports/schedules`: Create a recurring report schedule (`DAILY`, `WEEKLY`, `MONTHLY`).
+- `POST /reports/schedules/:scheduleId/run`: Trigger immediate execution of a scheduled report.
+- `DELETE /reports/schedules/:scheduleId`: Delete a report schedule.
+
+### 11.9 Multi-Format Export Engine
+- `POST /export`: Generates binary file exports with **OWASP Formula Injection Defense (CWE-1236)**:
+  - Formats: `CSV`, `XLSX` (Excel), `PDF` (Executive Scorecard)
+  - Supported report types: `EXECUTIVE_SUMMARY`, `TEST_EXECUTION`, `DEFECT_SUMMARY`, `COVERAGE_MATRIX`, `AUTOMATION_METRICS`, `QUALITY_GATE_AUDIT`, `AI_USAGE`
+  - Headers set appropriately: `Content-Disposition: attachment; filename="..."`, `Content-Type: text/csv | application/vnd.openxmlformats-officedocument.spreadsheetml.sheet | application/pdf`

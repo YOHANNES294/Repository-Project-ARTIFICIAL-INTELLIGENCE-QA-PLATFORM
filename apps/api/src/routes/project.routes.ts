@@ -497,6 +497,7 @@ projectRouter.use('/:projectId/test-plans', testPlanRouter);
 projectRouter.use('/:projectId/test-runs', testRunRouter);
 projectRouter.use('/:projectId/test-runs/:runId/cases', executionRouter);
 projectRouter.use('/:projectId/attachments', attachmentRouter);
+projectRouter.use('/:projectId/analytics', analyticsRouter);
 projectRouter.use('/:projectId', analyticsRouter);
 
 // Mount Milestone 06 subrouters scoped to project

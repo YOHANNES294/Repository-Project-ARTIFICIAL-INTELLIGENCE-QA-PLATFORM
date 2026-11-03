@@ -248,6 +248,9 @@ model Organization {
   webhooks          Webhook[]
   automationTokens  AutomationApiToken[]
   automationSessions AutomationSession[]
+  qualityGates      ProjectQualityGate[]
+  reportSchedules   ReportSchedule[]
+  reportExportJobs  ReportExportJob[]
 
   @@index([slug])
 }
@@ -421,6 +424,9 @@ model Project {
   automationSessions AutomationSession[]
   automationWebhooks AutomationWebhookEvent[]
   automationUnmapped AutomationUnmappedTest[]
+  qualityGates       ProjectQualityGate[]
+  reportSchedules    ReportSchedule[]
+  reportExportJobs   ReportExportJob[]
 
   @@unique([organizationId, key])
   @@index([organizationId])
@@ -540,6 +546,8 @@ model TestCase {
   description      String?
   preconditions    String?
   objectives       String?
+  requirementRef   String?           // External requirement identifier (e.g. "REQ-101", "JIRA-452")
+  acceptanceCriteria String?         // Acceptance criteria specification
   priority         TestPriority      @default(MEDIUM)
   type             TestType          @default(FUNCTIONAL)
   status           TestCaseStatus    @default(ACTIVE)
@@ -575,6 +583,8 @@ model TestCaseVersion {
   description   String?
   preconditions String?
   objectives    String?
+  requirementRef String?
+  acceptanceCriteria String?
   priority      TestPriority
   type          TestType
   status        TestCaseStatus    @default(ACTIVE)
@@ -1183,33 +1193,142 @@ model APIKey {
   @@index([organizationId])
 }
 
+// ----------------------------------------------------
+// MILESTONE 09 — ADVANCED ANALYTICS & REPORTING
+// ----------------------------------------------------
+
+model ProjectQualityGate {
+  id                        String       @id @default(uuid())
+  projectId                 String
+  organizationId            String
+  name                      String       @default("Default Release Gate")
+  description               String?
+  minTestPassRate           Float        @default(90.0) // Minimum acceptable pass rate percentage
+  maxCriticalDefects        Int          @default(0)    // Max allowed open CRITICAL defects
+  maxHighDefects            Int          @default(2)    // Max allowed open HIGH/MAJOR defects
+  minExecutionCoverage      Float        @default(80.0) // Minimum executed test cases percentage
+  requireAllSuitesCompleted Boolean      @default(false)
+  requireZeroBlockers       Boolean      @default(true) // No BLOCKED execution statuses allowed
+  isDefault                 Boolean      @default(true)
+  createdAt                 DateTime     @default(now())
+  updatedAt                 DateTime     @updatedAt
+
+  project                   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  organization              Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, name])
+  @@index([projectId])
+  @@index([organizationId])
+}
+
 model ReportDefinition {
   id          String           @id @default(uuid())
   projectId   String
   name        String
-  type        String           // "SUMMARY", "COVERAGE", "DEFECT_TREND"
-  filters     Json
+  description String?
+  type        String           @default("EXECUTIVE") // EXECUTIVE, TEST_EXECUTION, DEFECT_ANALYSIS, TEST_COVERAGE, AUTOMATION_PERFORMANCE, MILESTONE_RELEASE, AI_INTELLIGENCE
+  metrics     Json?            // Array of selected metric keys
+  dimensions  Json?            // Array of groupings (e.g. status, severity, environment, day)
+  filters     Json             // Date range, environment, milestone, priority, etc.
+  isTemplate  Boolean          @default(false)
+  createdById String?
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
   project     Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
   snapshots   ReportSnapshot[]
+  schedules   ReportSchedule[]
 
   @@index([projectId])
 }
 
 model ReportSnapshot {
-  id          String           @id @default(uuid())
-  reportDefId String
-  projectId   String
-  data        Json
-  generatedAt DateTime         @default(now())
+  id             String           @id @default(uuid())
+  reportDefId    String?
+  projectId      String
+  name           String?
+  type           String           @default("EXECUTIVE")
+  dateRangeStart DateTime?
+  dateRangeEnd   DateTime?
+  data           Json             // Frozen precomputed analytics snapshot data
+  summary        Json?            // High-level KPI summary
+  createdById    String?
+  generatedAt    DateTime         @default(now())
 
-  reportDef   ReportDefinition @relation(fields: [reportDefId], references: [id], onDelete: Cascade)
-  project     Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  reportDef      ReportDefinition? @relation(fields: [reportDefId], references: [id], onDelete: SetNull)
+  project        Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([reportDefId])
   @@index([projectId])
+  @@index([generatedAt])
+}
+
+model ReportSchedule {
+  id             String           @id @default(uuid())
+  reportDefId    String
+  projectId      String
+  organizationId String
+  name           String
+  frequency      String           @default("WEEKLY") // DAILY, WEEKLY, MONTHLY
+  cronExpression String?
+  recipients     Json             // Array of recipient email strings
+  format         String           @default("PDF")    // PDF, CSV, XLSX
+  isActive       Boolean          @default(true)
+  lastRunAt      DateTime?
+  nextRunAt      DateTime?
+  createdById    String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  reportDef      ReportDefinition @relation(fields: [reportDefId], references: [id], onDelete: Cascade)
+  project        Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deliveries     ReportDelivery[]
+
+  @@index([projectId, isActive])
+  @@index([reportDefId])
+  @@index([organizationId])
+}
+
+model ReportDelivery {
+  id           String         @id @default(uuid())
+  scheduleId   String
+  status       String         @default("SUCCESS") // SUCCESS, FAILED, PENDING
+  recipients   Json           // Target recipients
+  format       String         @default("PDF")
+  fileUrl      String?
+  errorMessage String?
+  deliveredAt  DateTime       @default(now())
+
+  schedule     ReportSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@index([scheduleId])
+  @@index([deliveredAt])
+}
+
+model ReportExportJob {
+  id             String       @id @default(uuid())
+  projectId      String
+  organizationId String
+  reportType     String       // EXECUTIVE, TEST_EXECUTION, DEFECT_ANALYSIS, TEST_COVERAGE, AUTOMATION_PERFORMANCE, MILESTONE_RELEASE, AI_INTELLIGENCE
+  format         String       // CSV, XLSX, PDF
+  status         String       @default("COMPLETED") // PENDING, PROCESSING, COMPLETED, FAILED
+  parameters     Json?
+  fileName       String
+  filePath       String?
+  fileSize       Int?
+  createdById    String?
+  errorMessage   String?
+  completedAt    DateTime?
+  expiresAt      DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status])
+  @@index([organizationId])
 }
 
 // ----------------------------------------------------

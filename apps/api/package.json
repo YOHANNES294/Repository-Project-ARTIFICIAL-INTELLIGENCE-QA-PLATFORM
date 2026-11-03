@@ -24,9 +24,11 @@
     "ioredis": "^5.5.0",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.5.0",
+    "pdfkit": "^0.16.0",
     "swagger-ui-express": "^5.0.1",
     "uuid": "^11.1.0",
     "winston": "^3.17.0",
+    "xlsx": "^0.18.5",
     "zod": "^3.24.2"
   },
   "devDependencies": {
@@ -37,6 +39,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.3.0",
     "@types/node": "^22.13.5",
+    "@types/pdfkit": "^0.17.7",
     "@types/supertest": "^6.0.2",
     "@types/swagger-ui-express": "^4.1.7",
     "@types/uuid": "^10.0.0",

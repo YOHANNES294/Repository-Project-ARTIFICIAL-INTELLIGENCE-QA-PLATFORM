@@ -86,6 +86,24 @@ import {
   AutomationUnmappedTestDto,
   ResolveUnmappedTestInput,
   AutomationWebhookEventDto,
+  ExecutiveDashboardMetricsDto,
+  DetailedExecutionAnalyticsDto,
+  CoverageAnalyticsDto,
+  DetailedDefectAnalyticsDto,
+  AutomationAnalyticsDto,
+  MilestoneReleaseAnalyticsDto,
+  AIIntelligenceAnalyticsDto,
+  ProjectQualityGateDto,
+  ReportDefinitionDto,
+  ReportSnapshotDto,
+  ReportScheduleDto,
+  CreateReportDefinitionInput,
+  UpdateReportDefinitionInput,
+  CreateReportSnapshotInput,
+  CreateReportScheduleInput,
+  CreateProjectQualityGateInput,
+  UpdateProjectQualityGateInput,
+  ExportReportInput,
 } from '@ai-qa/shared-types';
 
 export interface ProjectListParams {
@@ -1488,6 +1506,270 @@ export class ApiClient {
       events: res.data,
       meta: res.meta,
     };
+  }
+
+  // ----------------------------------------------------
+  // ADVANCED ANALYTICS & REPORTING (Milestone 09)
+  // ----------------------------------------------------
+  async getExecutiveAnalytics(
+    projectId: string,
+    params: { startDate?: string; endDate?: string; environmentId?: string; milestoneId?: string } = {}
+  ): Promise<ExecutiveDashboardMetricsDto> {
+    const query = new URLSearchParams();
+    if (params.startDate) query.set('startDate', params.startDate);
+    if (params.endDate) query.set('endDate', params.endDate);
+    if (params.environmentId) query.set('environmentId', params.environmentId);
+    if (params.milestoneId) query.set('milestoneId', params.milestoneId);
+
+    const qs = query.toString();
+    return this.request<ExecutiveDashboardMetricsDto>(
+      `/projects/${projectId}/analytics/executive${qs ? `?${qs}` : ''}`
+    );
+  }
+
+  async getExecutiveDashboard(
+    projectId: string,
+    params: { startDate?: string; endDate?: string; environmentId?: string; milestoneId?: string } = {}
+  ): Promise<ExecutiveDashboardMetricsDto> {
+    return this.getExecutiveAnalytics(projectId, params);
+  }
+
+  async getDetailedExecutionAnalytics(
+    projectId: string,
+    params: { startDate?: string; endDate?: string; environmentId?: string; milestoneId?: string } = {}
+  ): Promise<DetailedExecutionAnalyticsDto> {
+    const query = new URLSearchParams();
+    if (params.startDate) query.set('startDate', params.startDate);
+    if (params.endDate) query.set('endDate', params.endDate);
+    if (params.environmentId) query.set('environmentId', params.environmentId);
+    if (params.milestoneId) query.set('milestoneId', params.milestoneId);
+
+    const qs = query.toString();
+    return this.request<DetailedExecutionAnalyticsDto>(
+      `/projects/${projectId}/analytics/executions${qs ? `?${qs}` : ''}`
+    );
+  }
+
+  async getCoverageAnalytics(
+    projectId: string,
+    params: { milestoneId?: string } = {}
+  ): Promise<CoverageAnalyticsDto> {
+    const query = new URLSearchParams();
+    if (params.milestoneId) query.set('milestoneId', params.milestoneId);
+
+    const qs = query.toString();
+    return this.request<CoverageAnalyticsDto>(
+      `/projects/${projectId}/analytics/coverage${qs ? `?${qs}` : ''}`
+    );
+  }
+
+  async getDetailedDefectAnalytics(
+    projectId: string,
+    params: { startDate?: string; endDate?: string; environmentId?: string; milestoneId?: string; component?: string } = {}
+  ): Promise<DetailedDefectAnalyticsDto> {
+    const query = new URLSearchParams();
+    if (params.startDate) query.set('startDate', params.startDate);
+    if (params.endDate) query.set('endDate', params.endDate);
+    if (params.environmentId) query.set('environmentId', params.environmentId);
+    if (params.milestoneId) query.set('milestoneId', params.milestoneId);
+    if (params.component) query.set('component', params.component);
+
+    const qs = query.toString();
+    return this.request<DetailedDefectAnalyticsDto>(
+      `/projects/${projectId}/analytics/defects${qs ? `?${qs}` : ''}`
+    );
+  }
+
+  async getAutomationAnalytics(
+    projectId: string,
+    params: { startDate?: string; endDate?: string; framework?: string; ciProvider?: string } = {}
+  ): Promise<AutomationAnalyticsDto> {
+    const query = new URLSearchParams();
+    if (params.startDate) query.set('startDate', params.startDate);
+    if (params.endDate) query.set('endDate', params.endDate);
+    if (params.framework) query.set('framework', params.framework);
+    if (params.ciProvider) query.set('ciProvider', params.ciProvider);
+
+    const qs = query.toString();
+    return this.request<AutomationAnalyticsDto>(
+      `/projects/${projectId}/analytics/automation${qs ? `?${qs}` : ''}`
+    );
+  }
+
+  async getMilestoneReleaseAnalytics(
+    projectId: string,
+    milestoneId: string
+  ): Promise<MilestoneReleaseAnalyticsDto> {
+    return this.request<MilestoneReleaseAnalyticsDto>(
+      `/projects/${projectId}/analytics/milestones/${milestoneId}`
+    );
+  }
+
+  async getAIAnalytics(
+    projectId: string,
+    params: { startDate?: string; endDate?: string; provider?: string } = {}
+  ): Promise<AIIntelligenceAnalyticsDto> {
+    const query = new URLSearchParams();
+    if (params.startDate) query.set('startDate', params.startDate);
+    if (params.endDate) query.set('endDate', params.endDate);
+    if (params.provider) query.set('provider', params.provider);
+
+    const qs = query.toString();
+    return this.request<AIIntelligenceAnalyticsDto>(
+      `/projects/${projectId}/analytics/ai${qs ? `?${qs}` : ''}`
+    );
+  }
+
+  // Quality Gates
+  async getQualityGates(projectId: string): Promise<ProjectQualityGateDto[]> {
+    return this.request<ProjectQualityGateDto[]>(`/projects/${projectId}/analytics/quality-gates`);
+  }
+
+  async createQualityGate(
+    projectId: string,
+    payload: CreateProjectQualityGateInput
+  ): Promise<ProjectQualityGateDto> {
+    return this.request<ProjectQualityGateDto>(`/projects/${projectId}/analytics/quality-gates`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateQualityGate(
+    projectId: string,
+    gateId: string,
+    payload: UpdateProjectQualityGateInput
+  ): Promise<ProjectQualityGateDto> {
+    return this.request<ProjectQualityGateDto>(
+      `/projects/${projectId}/analytics/quality-gates/${gateId}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      }
+    );
+  }
+
+  async deleteQualityGate(projectId: string, gateId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(
+      `/projects/${projectId}/analytics/quality-gates/${gateId}`,
+      { method: 'DELETE' }
+    );
+  }
+
+  // Report Definitions
+  async getReportDefinitions(projectId: string): Promise<ReportDefinitionDto[]> {
+    return this.request<ReportDefinitionDto[]>(`/projects/${projectId}/analytics/reports`);
+  }
+
+  async getReportDefinition(projectId: string, reportId: string): Promise<ReportDefinitionDto> {
+    return this.request<ReportDefinitionDto>(`/projects/${projectId}/analytics/reports/${reportId}`);
+  }
+
+  async createReportDefinition(
+    projectId: string,
+    payload: CreateReportDefinitionInput
+  ): Promise<ReportDefinitionDto> {
+    return this.request<ReportDefinitionDto>(`/projects/${projectId}/analytics/reports`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateReportDefinition(
+    projectId: string,
+    reportId: string,
+    payload: UpdateReportDefinitionInput
+  ): Promise<ReportDefinitionDto> {
+    return this.request<ReportDefinitionDto>(`/projects/${projectId}/analytics/reports/${reportId}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteReportDefinition(projectId: string, reportId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(
+      `/projects/${projectId}/analytics/reports/${reportId}`,
+      { method: 'DELETE' }
+    );
+  }
+
+  async runReport(
+    projectId: string,
+    payload: { reportType: string; filters?: Record<string, unknown> }
+  ): Promise<any> {
+    return this.request<any>(`/projects/${projectId}/analytics/reports/run`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  // Report Snapshots
+  async getReportSnapshots(projectId: string): Promise<ReportSnapshotDto[]> {
+    return this.request<ReportSnapshotDto[]>(`/projects/${projectId}/analytics/reports/snapshots/list`);
+  }
+
+  async getReportSnapshot(projectId: string, snapshotId: string): Promise<ReportSnapshotDto> {
+    return this.request<ReportSnapshotDto>(
+      `/projects/${projectId}/analytics/reports/snapshots/${snapshotId}`
+    );
+  }
+
+  async createReportSnapshot(
+    projectId: string,
+    payload: CreateReportSnapshotInput
+  ): Promise<ReportSnapshotDto> {
+    return this.request<ReportSnapshotDto>(`/projects/${projectId}/analytics/reports/snapshots`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  // Report Schedules
+  async getReportSchedules(projectId: string): Promise<ReportScheduleDto[]> {
+    return this.request<ReportScheduleDto[]>(`/projects/${projectId}/analytics/reports/schedules/list`);
+  }
+
+  async createReportSchedule(
+    projectId: string,
+    payload: CreateReportScheduleInput
+  ): Promise<ReportScheduleDto> {
+    return this.request<ReportScheduleDto>(`/projects/${projectId}/analytics/reports/schedules`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async triggerReportSchedule(projectId: string, scheduleId: string): Promise<any> {
+    return this.request<any>(
+      `/projects/${projectId}/analytics/reports/schedules/${scheduleId}/run`,
+      { method: 'POST' }
+    );
+  }
+
+  async deleteReportSchedule(projectId: string, scheduleId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(
+      `/projects/${projectId}/analytics/reports/schedules/${scheduleId}`,
+      { method: 'DELETE' }
+    );
+  }
+
+  // Export
+  async exportReport(
+    projectId: string,
+    payload: ExportReportInput
+  ): Promise<Blob> {
+    const res = await fetch(`${this.baseUrl}/projects/${projectId}/analytics/export`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      throw new Error(`Export failed with HTTP ${res.status}`);
+    }
+    return res.blob();
   }
 }
 

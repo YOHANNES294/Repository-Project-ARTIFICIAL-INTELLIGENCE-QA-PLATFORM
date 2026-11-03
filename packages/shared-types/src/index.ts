@@ -1592,3 +1592,496 @@ export interface ResolveUnmappedTestInput {
   createTestCase?: boolean;
   status: 'RESOLVED' | 'IGNORED';
 }
+
+// ----------------------------------------------------
+// MILESTONE 09 — ADVANCED ANALYTICS & REPORTING
+// ----------------------------------------------------
+
+export enum ReportType {
+  EXECUTIVE = 'EXECUTIVE',
+  TEST_EXECUTION = 'TEST_EXECUTION',
+  DEFECT_ANALYSIS = 'DEFECT_ANALYSIS',
+  TEST_COVERAGE = 'TEST_COVERAGE',
+  AUTOMATION_PERFORMANCE = 'AUTOMATION_PERFORMANCE',
+  MILESTONE_RELEASE = 'MILESTONE_RELEASE',
+  AI_INTELLIGENCE = 'AI_INTELLIGENCE',
+}
+
+export enum ExportFormat {
+  CSV = 'CSV',
+  XLSX = 'XLSX',
+  PDF = 'PDF',
+}
+
+export enum ReportFrequency {
+  DAILY = 'DAILY',
+  WEEKLY = 'WEEKLY',
+  MONTHLY = 'MONTHLY',
+}
+
+export interface AnalyticsFilterParams {
+  startDate?: string;
+  endDate?: string;
+  environmentId?: string;
+  milestoneId?: string;
+  status?: string;
+  severity?: string;
+  component?: string;
+}
+
+export interface ExecutiveDashboardMetricsDto {
+  totalProjects: number;
+  activeProjects: number;
+  totalTestCases: number;
+  activeTestCases: number;
+  testCoveragePercentage: number;
+  totalExecutions: number;
+  passedTests: number;
+  failedTests: number;
+  blockedTests: number;
+  skippedTests: number;
+  passRate: number;
+  failureRate: number;
+  openDefects: number;
+  criticalDefects: number;
+  highDefects: number;
+  defectResolutionRate: number;
+  automationExecutions: number;
+  automationPassRate: number;
+  activeMilestones: number;
+  completedMilestones: number;
+  releaseReadinessScore: number;
+  releaseReadinessStatus: 'READY' | 'WARNING' | 'NOT_READY';
+  previousPeriodTrends?: {
+    passRateDelta: number;
+    defectDelta: number;
+    coverageDelta: number;
+    executionVolumeDelta: number;
+  };
+}
+
+export interface DetailedExecutionAnalyticsDto {
+  summary: {
+    totalExecutions: number;
+    passed: number;
+    failed: number;
+    blocked: number;
+    skipped: number;
+    notRun: number;
+    passRate: number;
+    failureRate: number;
+    avgDurationMs: number;
+    manualExecutions: number;
+    automatedExecutions: number;
+    retryCount: number;
+  };
+  dailyTrends: Array<{
+    date: string;
+    passed: number;
+    failed: number;
+    blocked: number;
+    skipped: number;
+    total: number;
+    passRate: number;
+  }>;
+  environmentBreakdown: Array<{
+    environmentName: string;
+    environmentId?: string;
+    passed: number;
+    failed: number;
+    blocked: number;
+    skipped: number;
+    total: number;
+    passRate: number;
+  }>;
+  testSuitePerformance: Array<{
+    suiteId: string;
+    suiteName: string;
+    totalCases: number;
+    passed: number;
+    failed: number;
+    passRate: number;
+  }>;
+  flakyTestCandidates: Array<{
+    testCaseId: string;
+    testCaseTitle: string;
+    totalAttempts: number;
+    passedAttempts: number;
+    failedAttempts: number;
+    flakinessScore: number;
+    lastFlakedAt?: string;
+  }>;
+  repeatedFailures: Array<{
+    testCaseId: string;
+    testCaseTitle: string;
+    consecutiveFailures: number;
+    lastFailedAt: string;
+  }>;
+  testerWorkload: Array<{
+    testerId: string;
+    testerName: string;
+    executionsCount: number;
+    passedCount: number;
+    failedCount: number;
+  }>;
+}
+
+export interface CoverageAnalyticsDto {
+  existenceCoverage: {
+    totalCases: number;
+    activeCases: number;
+    draftCases: number;
+    deprecatedCases: number;
+  };
+  executionCoverage: {
+    totalEligibleCases: number;
+    executedCases: number;
+    unexecutedCases: number;
+    executionCoverageRate: number;
+  };
+  requirementCoverage: {
+    totalCases: number;
+    linkedToRequirements: number;
+    unlinkedCases: number;
+    requirementCoverageRate: number;
+    isAvailable: boolean;
+    notes?: string;
+  };
+  automationCoverage: {
+    totalActiveCases: number;
+    automatedCases: number;
+    manualCases: number;
+    automationCoverageRate: number;
+  };
+  suiteCoverage: Array<{
+    suiteId: string;
+    suiteName: string;
+    totalCases: number;
+    executedCases: number;
+    automatedCases: number;
+    coverageRate: number;
+  }>;
+  milestoneCoverage: Array<{
+    milestoneId: string;
+    milestoneName: string;
+    totalCases: number;
+    executedCases: number;
+    coverageRate: number;
+  }>;
+}
+
+export interface DetailedDefectAnalyticsDto {
+  summary: {
+    totalCreated: number;
+    totalResolved: number;
+    openCount: number;
+    closedCount: number;
+    avgResolutionHours: number;
+    reopenRate: number;
+    criticalCount: number;
+    highCount: number;
+  };
+  severityDistribution: Array<{
+    severity: string;
+    count: number;
+    percentage: number;
+  }>;
+  priorityDistribution: Array<{
+    priority: string;
+    count: number;
+    percentage: number;
+  }>;
+  statusBreakdown: Array<{
+    status: string;
+    count: number;
+  }>;
+  defectsByComponent: Array<{
+    component: string;
+    total: number;
+    open: number;
+    closed: number;
+  }>;
+  defectsByEnvironment: Array<{
+    environmentName: string;
+    total: number;
+    open: number;
+  }>;
+  defectsByMilestone: Array<{
+    milestoneName: string;
+    total: number;
+    open: number;
+  }>;
+  defectAging: Array<{
+    ageBucket: string;
+    count: number;
+  }>;
+  traceability: {
+    totalDefects: number;
+    linkedToTestExecutions: number;
+    linkedToTestCases: number;
+    standaloneDefects: number;
+    testTraceabilityRate: number;
+  };
+}
+
+export interface AutomationAnalyticsDto {
+  summary: {
+    totalSessions: number;
+    totalTestsExecuted: number;
+    passedTests: number;
+    failedTests: number;
+    skippedTests: number;
+    passRate: number;
+    avgDurationMs: number;
+    unmappedCount: number;
+  };
+  frameworkDistribution: Array<{
+    framework: string;
+    executions: number;
+    passRate: number;
+  }>;
+  browserBreakdown: Array<{
+    browser: string;
+    executions: number;
+    passRate: number;
+  }>;
+  ciProviderBreakdown: Array<{
+    provider: string;
+    sessionsCount: number;
+    successfulSessions: number;
+    failedSessions: number;
+  }>;
+  flakyAutomatedTests: Array<{
+    externalId: string;
+    externalTitle: string;
+    framework: string;
+    totalExecutions: number;
+    flakinessScore: number;
+    testCaseId?: string | null;
+  }>;
+  durationTrends: Array<{
+    date: string;
+    avgDurationMs: number;
+    totalTests: number;
+  }>;
+}
+
+export interface MilestoneReleaseAnalyticsDto {
+  milestoneId: string;
+  milestoneName: string;
+  status: string;
+  progressPercentage: number;
+  testRunStats: {
+    totalRuns: number;
+    completedRuns: number;
+    totalCases: number;
+    passedCases: number;
+    failedCases: number;
+    blockedCases: number;
+    passRate: number;
+  };
+  defectStats: {
+    totalDefects: number;
+    openDefects: number;
+    criticalDefects: number;
+    highDefects: number;
+    blockerDefects: number;
+  };
+  qualityGateEvaluation: {
+    passed: boolean;
+    qualityGateName: string;
+    rules: Array<{
+      ruleKey: string;
+      description: string;
+      threshold: string | number | boolean;
+      actual: string | number | boolean;
+      passed: boolean;
+    }>;
+    recommendation: 'READY_FOR_RELEASE' | 'WARNING_NEEDS_REVIEW' | 'BLOCKED_DO_NOT_RELEASE';
+    evaluatedAt: string;
+  };
+}
+
+export interface AIIntelligenceAnalyticsDto {
+  summary: {
+    totalGenerations: number;
+    totalProposedCases: number;
+    acceptedCases: number;
+    rejectedCases: number;
+    humanAcceptanceRate: number;
+    totalTokensConsumed: number;
+    estimatedTotalCost: number;
+    avgLatencyMs: number;
+    errorRate: number;
+  };
+  taskBreakdown: Array<{
+    taskType: string;
+    count: number;
+    tokens: number;
+    cost: number;
+  }>;
+  providerBreakdown: Array<{
+    provider: string;
+    model: string;
+    calls: number;
+    tokens: number;
+    errors: number;
+    cost: number;
+  }>;
+  userFeedbackSummary: {
+    totalRatings: number;
+    helpfulCount: number;
+    notHelpfulCount: number;
+    inaccurateCount: number;
+    incompleteCount: number;
+    satisfactionRate: number;
+  };
+}
+
+export interface ProjectQualityGateDto {
+  id: string;
+  projectId: string;
+  organizationId: string;
+  name: string;
+  description: string | null;
+  minTestPassRate: number;
+  maxCriticalDefects: number;
+  maxHighDefects: number;
+  minExecutionCoverage: number;
+  requireAllSuitesCompleted: boolean;
+  requireZeroBlockers: boolean;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReportDefinitionDto {
+  id: string;
+  projectId: string;
+  name: string;
+  description: string | null;
+  type: string;
+  metrics: string[] | null;
+  dimensions: string[] | null;
+  filters: Record<string, unknown>;
+  isTemplate: boolean;
+  createdById: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReportSnapshotDto {
+  id: string;
+  reportDefId: string | null;
+  projectId: string;
+  name: string | null;
+  type: string;
+  dateRangeStart: string | null;
+  dateRangeEnd: string | null;
+  data: Record<string, unknown>;
+  summary: Record<string, unknown> | null;
+  createdById: string | null;
+  generatedAt: string;
+}
+
+export interface ReportScheduleDto {
+  id: string;
+  reportDefId: string;
+  projectId: string;
+  organizationId: string;
+  name: string;
+  frequency: string;
+  cronExpression: string | null;
+  recipients: string[];
+  format: string;
+  isActive: boolean;
+  lastRunAt: string | null;
+  nextRunAt: string | null;
+  createdById: string | null;
+  createdAt: string;
+  updatedAt: string;
+  reportDef?: ReportDefinitionDto;
+}
+
+export interface ReportExportJobDto {
+  id: string;
+  projectId: string;
+  organizationId: string;
+  reportType: string;
+  format: string;
+  status: string;
+  parameters: Record<string, unknown> | null;
+  fileName: string;
+  fileSize: number | null;
+  downloadUrl?: string;
+  errorMessage: string | null;
+  completedAt: string | null;
+  expiresAt: string | null;
+  createdAt: string;
+}
+
+export interface CreateReportDefinitionInput {
+  name: string;
+  description?: string | null;
+  type?: ReportType | string;
+  metrics?: string[];
+  dimensions?: string[];
+  filters?: Record<string, unknown>;
+  isTemplate?: boolean;
+}
+
+export interface UpdateReportDefinitionInput {
+  name?: string;
+  description?: string | null;
+  metrics?: string[];
+  dimensions?: string[];
+  filters?: Record<string, unknown>;
+}
+
+export interface CreateReportSnapshotInput {
+  reportDefId?: string | null;
+  name?: string;
+  type?: string;
+  dateRangeStart?: string;
+  dateRangeEnd?: string;
+}
+
+export interface CreateReportScheduleInput {
+  reportDefId: string;
+  name: string;
+  frequency?: ReportFrequency | string;
+  cronExpression?: string | null;
+  recipients: string[];
+  format?: ExportFormat | string;
+}
+
+export interface CreateProjectQualityGateInput {
+  name: string;
+  description?: string | null;
+  minTestPassRate?: number;
+  maxCriticalDefects?: number;
+  maxHighDefects?: number;
+  minExecutionCoverage?: number;
+  requireAllSuitesCompleted?: boolean;
+  requireZeroBlockers?: boolean;
+  isDefault?: boolean;
+}
+
+export interface UpdateProjectQualityGateInput {
+  name?: string;
+  description?: string | null;
+  minTestPassRate?: number;
+  maxCriticalDefects?: number;
+  maxHighDefects?: number;
+  minExecutionCoverage?: number;
+  requireAllSuitesCompleted?: boolean;
+  requireZeroBlockers?: boolean;
+  isDefault?: boolean;
+}
+
+export interface ExportReportInput {
+  reportType: ReportType | string;
+  format: ExportFormat | string;
+  filters?: Record<string, unknown>;
+  name?: string;
+}

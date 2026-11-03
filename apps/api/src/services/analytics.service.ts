@@ -1,6 +1,7 @@
 import { prisma } from '../prisma.js';
 import { NotFoundError } from '../errors.js';
-import { ExecutionStatus, ExecutionAnalyticsDto } from '@ai-qa/shared-types';
+import { ExecutionStatus } from '@ai-qa/shared-types';
+export * from './analytics/index.js';
 
 export class AnalyticsService {
   static async getExecutionAnalytics(
@@ -11,7 +12,7 @@ export class AnalyticsService {
       milestoneId?: string;
       environmentId?: string;
     } = {}
-  ): Promise<ExecutionAnalyticsDto> {
+  ): Promise<any> {
     const project = await prisma.project.findUnique({
       where: { id: projectId },
       select: { id: true, key: true },

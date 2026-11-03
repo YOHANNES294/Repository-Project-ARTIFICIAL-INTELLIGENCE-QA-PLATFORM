@@ -832,3 +832,106 @@ export type FinalizeAutomationSessionInput = z.infer<typeof finalizeAutomationSe
 export type CreateAutomationMappingInput = z.infer<typeof createAutomationMappingSchema>;
 export type UpdateAutomationMappingInput = z.infer<typeof updateAutomationMappingSchema>;
 export type ResolveUnmappedTestInput = z.infer<typeof resolveUnmappedTestSchema>;
+
+// ----------------------------------------------------
+// MILESTONE 09: ADVANCED ANALYTICS & REPORTING SCHEMAS
+// ----------------------------------------------------
+
+export const reportTypeEnum = z.enum([
+  'EXECUTIVE',
+  'TEST_EXECUTION',
+  'DEFECT_ANALYSIS',
+  'TEST_COVERAGE',
+  'AUTOMATION_PERFORMANCE',
+  'MILESTONE_RELEASE',
+  'AI_INTELLIGENCE',
+]);
+
+export const exportFormatEnum = z.enum(['CSV', 'XLSX', 'PDF']);
+
+export const reportFrequencyEnum = z.enum(['DAILY', 'WEEKLY', 'MONTHLY']);
+
+export const analyticsFilterQuerySchema = z.object({
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  environmentId: z.string().uuid().optional(),
+  milestoneId: z.string().uuid().optional(),
+  status: z.string().optional(),
+  severity: z.string().optional(),
+  component: z.string().optional(),
+});
+
+export const createReportDefinitionSchema = z.object({
+  name: z.string().min(2, 'Report name must be at least 2 characters').max(200).trim(),
+  description: z.string().max(1000).optional().nullable(),
+  type: reportTypeEnum.default('EXECUTIVE'),
+  metrics: z.array(z.string().min(1).max(100)).optional(),
+  dimensions: z.array(z.string().min(1).max(100)).optional(),
+  filters: z.record(z.any()).default({}),
+  isTemplate: z.boolean().default(false),
+});
+
+export const updateReportDefinitionSchema = z.object({
+  name: z.string().min(2).max(200).trim().optional(),
+  description: z.string().max(1000).optional().nullable(),
+  metrics: z.array(z.string().min(1).max(100)).optional(),
+  dimensions: z.array(z.string().min(1).max(100)).optional(),
+  filters: z.record(z.any()).optional(),
+});
+
+export const createReportSnapshotSchema = z.object({
+  reportDefId: z.string().uuid().optional().nullable(),
+  name: z.string().max(200).optional(),
+  type: reportTypeEnum.default('EXECUTIVE'),
+  dateRangeStart: z.string().datetime().optional(),
+  dateRangeEnd: z.string().datetime().optional(),
+});
+
+export const createReportScheduleSchema = z.object({
+  reportDefId: z.string().uuid('Valid report definition ID is required'),
+  name: z.string().min(2).max(200).trim(),
+  frequency: reportFrequencyEnum.default('WEEKLY'),
+  cronExpression: z.string().max(100).optional().nullable(),
+  recipients: z.array(z.string().email('Invalid email recipient')).min(1, 'At least one recipient is required'),
+  format: exportFormatEnum.default('PDF'),
+});
+
+export const createProjectQualityGateSchema = z.object({
+  name: z.string().min(2, 'Quality gate name must be at least 2 characters').max(200).trim(),
+  description: z.string().max(1000).optional().nullable(),
+  minTestPassRate: z.number().min(0).max(100).default(90.0),
+  maxCriticalDefects: z.number().int().min(0).default(0),
+  maxHighDefects: z.number().int().min(0).default(2),
+  minExecutionCoverage: z.number().min(0).max(100).default(80.0),
+  requireAllSuitesCompleted: z.boolean().default(false),
+  requireZeroBlockers: z.boolean().default(true),
+  isDefault: z.boolean().default(true),
+});
+
+export const updateProjectQualityGateSchema = z.object({
+  name: z.string().min(2).max(200).trim().optional(),
+  description: z.string().max(1000).optional().nullable(),
+  minTestPassRate: z.number().min(0).max(100).optional(),
+  maxCriticalDefects: z.number().int().min(0).optional(),
+  maxHighDefects: z.number().int().min(0).optional(),
+  minExecutionCoverage: z.number().min(0).max(100).optional(),
+  requireAllSuitesCompleted: z.boolean().optional(),
+  requireZeroBlockers: z.boolean().optional(),
+  isDefault: z.boolean().optional(),
+});
+
+export const exportReportSchema = z.object({
+  reportType: reportTypeEnum,
+  format: exportFormatEnum,
+  filters: z.record(z.any()).default({}),
+  name: z.string().max(200).optional(),
+});
+
+export type AnalyticsFilterQueryInput = z.infer<typeof analyticsFilterQuerySchema>;
+export type CreateReportDefinitionInputSchema = z.infer<typeof createReportDefinitionSchema>;
+export type UpdateReportDefinitionInputSchema = z.infer<typeof updateReportDefinitionSchema>;
+export type CreateReportSnapshotInputSchema = z.infer<typeof createReportSnapshotSchema>;
+export type CreateReportScheduleInputSchema = z.infer<typeof createReportScheduleSchema>;
+export type CreateProjectQualityGateInputSchema = z.infer<typeof createProjectQualityGateSchema>;
+export type UpdateProjectQualityGateInputSchema = z.infer<typeof updateProjectQualityGateSchema>;
+export type ExportReportInputSchema = z.infer<typeof exportReportSchema>;

@@ -115,3 +115,43 @@ The mapping service resolves automated test cases to platform `TestCase` entitie
 - `POST /api/v1/projects/:projectId/automation/webhooks/github` ingests GitHub `workflow_run`, `workflow_job`, and `check_run` events.
 - **HMAC-SHA256 Signature Verification**: Validates the `X-Hub-Signature-256` header against the organization or project webhook secret.
 - **Deduplication**: Ingested webhooks log delivery IDs (`X-GitHub-Delivery`) in `AutomationWebhookEvent` to guarantee idempotent processing.
+
+
+---
+
+## 6. Advanced Analytics & Reporting Architecture (Milestone 09)
+
+### 6.1 Database-Backed Aggregation Pipeline
+The platform avoids cached or hardcoded dashboard metrics by computing analytics on-demand using optimized PostgreSQL database queries scoped to the tenant:
+1. **Tenant Isolation Enclosure**: All analytics queries strictly enforce `projectId` and `organizationId` scoping, preventing cross-tenant data leakage.
+2. **Dynamic Period Aggregation**: Computes both active period metrics and historical comparison deltas (e.g. current 30d vs previous 30d) within single round-trip database queries.
+3. **Empty Dataset Resiliency**: All aggregation queries implement fallback zero-divisions and null-safe guards to guarantee 200 OK responses with clean JSON even on freshly created, unexecuted projects.
+
+### 6.2 Flaky Test Detection & Status Flip Algorithm
+To combat non-deterministic tests in CI/CD pipelines, the analytics engine implements an explainable **Status Flip Algorithm**:
+- Analyzes chronological execution attempt histories for test cases.
+- Computes state flips: occurrences where an outcome changes from `PASSED` to `FAILED` or `FAILED` to `PASSED` across contiguous attempts within the same scope.
+- Calculates an explainable `flakinessScore`:
+  $$\text{Flakiness Score} = \min\left(100, \text{round}\left(\frac{\text{Flips} \times 2}{\text{Attempts}} \times 100\right)\right)$$
+- Highlights high-risk tests with intermittent behavior for engineer refactoring.
+
+### 6.3 Algorithmic Release Quality Gates
+Quality gates govern continuous delivery by verifying release criteria:
+- Evaluates active `ProjectQualityGate` thresholds:
+  - `minTestPassRate` (e.g. $\ge 95\%$)
+  - `maxCriticalDefects` (e.g. $\le 0$)
+  - `maxHighDefects` (e.g. $\le 2$)
+  - `minExecutionCoverage` (e.g. $\ge 90\%$)
+  - `requireZeroBlockers` (strict boolean enforcement)
+- Generates an explainable release recommendation:
+  - `READY_FOR_RELEASE`: All gate thresholds satisfied.
+  - `WARNING_NEEDS_REVIEW`: Non-blocking thresholds missed.
+  - `BLOCKED_DO_NOT_RELEASE`: Blocking criteria or blocker defects present.
+
+### 6.4 Immutable Snapshots & Scheduled Reports
+- `ReportSnapshot`: Captures a frozen point-in-time snapshot of live aggregated data for audits, executive sign-off, or regulatory compliance.
+- `ReportSchedule`: Recurring background jobs triggering periodic report generation and email notifications (`DAILY`, `WEEKLY`, `MONTHLY`) with audit trail logging in `ReportDelivery`.
+
+### 6.5 Export Architecture & Formula Injection Defense
+- **Multi-Format Streaming**: Generates sanitized CSVs, multi-worksheet Excel spreadsheets via SheetJS (`xlsx`), and branded corporate scorecard PDFs via `pdfkit` (valid `%PDF-` signature).
+- **OWASP CWE-1236 Sanitization**: The `FormulaSanitizer` utility neutralizes dynamic formula execution triggers (`=`, `+`, `-`, `@`, `\t`, `\r`) by prepending a single quote before file compilation.

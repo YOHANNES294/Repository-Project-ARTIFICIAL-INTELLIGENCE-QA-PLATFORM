@@ -32,6 +32,7 @@ import {
   PlayCircle,
   Bug,
   Cpu,
+  BarChart3,
 } from 'lucide-react';
 
 export default function ProjectDetailPage() {
@@ -267,6 +268,7 @@ export default function ProjectDetailPage() {
         <div className="flex border-b border-slate-200 dark:border-slate-700 mt-6 -mb-6 space-x-6 overflow-x-auto">
           {[
             { id: 'overview', label: 'Overview', icon: FolderGit2, href: null },
+            { id: 'analytics', label: 'Analytics & Reports', icon: BarChart3, href: `/projects/${projectId}/analytics` },
             { id: 'test-cases', label: 'Test Cases', icon: CheckSquare, href: `/projects/${projectId}/test-cases` },
             { id: 'suites', label: 'Test Suites', icon: FolderTree, href: `/projects/${projectId}/test-suites` },
             { id: 'milestones', label: 'Milestones', icon: Milestone, href: `/projects/${projectId}/milestones` },
@@ -457,6 +459,22 @@ export default function ProjectDetailPage() {
                   </h4>
                   <p className="text-xs text-slate-500 mt-1">
                     Playwright reporter, Newman ingestion, API tokens, test mappings & CI webhooks
+                  </p>
+                </Link>
+
+                <Link
+                  href={`/projects/${projectId}/analytics`}
+                  className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:border-blue-500 hover:shadow-md transition-all group"
+                >
+                  <div className="p-2.5 rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 w-fit mb-3 group-hover:scale-105 transition-transform">
+                    <BarChart3 className="h-5 w-5" />
+                  </div>
+                  <h4 className="font-bold text-slate-900 dark:text-white text-sm flex items-center justify-between">
+                    Advanced Analytics & Reports
+                    <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Executive dashboards, quality gates, flakiness, coverage, exports & historical snapshots
                   </p>
                 </Link>
               </div>

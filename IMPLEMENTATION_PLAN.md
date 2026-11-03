@@ -250,12 +250,49 @@ ARTIFICIAL INTELLIGENCE QA PLATFORM/
 
 ---
 
-## 5. Upcoming Milestone Roadmap (09 — 12)
+### Milestone 09 — Advanced Analytics & Reporting (COMPLETED)
+- **Mandatory Framework Correction**:
+  - Fully upgraded web application to stable **Next.js 16.4.4** with **React 19.0.0**.
+  - Configured `"build": "next build --webpack"` to ensure clean, deterministic production compilation on Windows.
+  - Next.js 16 production build verified with exit code 0 and all 10 analytics routes statically & dynamically compiled.
+- **Centralized Analytics & Database Aggregation Engine**:
+  - Implemented 10 database-backed analytics services under `apps/api/src/services/analytics/`:
+    - `ExecutiveAnalyticsService`: High-level quality KPIs, release readiness score, and historical previous period deltas.
+    - `ExecutionAnalyticsService`: Detailed daily trends, flaky test detection (status flip algorithm), repeated consecutive failures, test suite breakdown, tester leaderboard.
+    - `CoverageAnalyticsService`: Existence coverage (active/draft/deprecated), execution coverage (executed vs active), requirement coverage (requirement references mapped), and automation coverage (automated code mapped).
+    - `DefectAnalyticsService`: MTTR (average resolution hours), reopen rate, test traceability rate, severity & priority distributions, and aging duration buckets (<3d, 3-7d, 8-14d, 15-30d, >30d).
+    - `AutomationAnalyticsService`: Integrates M08 automation sessions, true test outcome pass rates (not just ingestion success), framework distributions, browser matrices, and CI providers.
+    - `MilestoneReleaseAnalyticsService`: Progress %, test run outcomes, defect counts, configurable `ProjectQualityGate` rule verification, and release recommendation.
+    - `AIAnalyticsService`: Integrates M07 AI generations, review statuses, token consumption, cost telemetry, and user feedback ratings.
+    - `CustomReportService`: Dynamic report runner, report definitions CRUD, immutable snapshots, and recurring schedules.
+    - `ExportService`: Generates sanitized CSV, multi-sheet Excel XLSX, and corporate scorecard PDF with `%PDF-` signature.
+    - `FormulaSanitizer`: OWASP CWE-1236 mitigation neutralizing dangerous triggers (`=`, `+`, `-`, `@`, `\t`, `\r`).
+- **Prisma Schema & Relational Models**:
+  - Enhanced `TestCase` and `TestCaseVersion` with `requirementRef` and `acceptanceCriteria`.
+  - Added models: `ProjectQualityGate`, `ReportDefinition`, `ReportSnapshot`, `ReportSchedule`, `ReportDelivery`, and `ReportExportJob`.
+- **Frontend Next.js 16 Quality Analytics Hub**:
+  - Created 10 responsive pages & components under `/projects/[projectId]/analytics/`:
+    - `layout.tsx`: Universal analytics sub-navigation header (`AnalyticsNav`).
+    - `page.tsx`: Executive Dashboard with date range selector, scorecard KPIs, Recharts donuts & bar charts, release readiness advisory banner, and export button.
+    - `executions/page.tsx`: Detailed execution analytics with daily trend area chart, flaky test detection table, persistent failure streaks table, suite performance, and tester workload.
+    - `coverage/page.tsx`: 4-pillar coverage matrix (existence, execution, requirement, automation) with suite and milestone coverage breakdowns.
+    - `defects/page.tsx`: Defect analytics with MTTR, reopen rate, traceability rate, aging analysis buckets, and component/environment tables.
+    - `automation/page.tsx`: Automation analytics with framework distribution, browser matrices, CI providers, and duration trends.
+    - `milestones/page.tsx`: Milestone release analytics with rule-by-rule Quality Gate evaluation table and gate configuration modal.
+    - `ai/page.tsx`: AI intelligence analytics with generation volume, acceptance rate, token consumption, cost, and user satisfaction ratings.
+    - `reports/page.tsx`: Reports Hub with saved definitions, historical snapshots, and scheduled reports.
+    - `reports/new/page.tsx`: Custom report builder form with metric selection and recurring schedule options.
+    - `reports/[reportId]/page.tsx`: View and live execution runner for custom reports with instant export and snapshot creation.
+    - `export-modal.tsx`: Universal multi-format export dialog with CSV, XLSX, and PDF download triggers.
+  - Updated Project Overview page with QA Hub quick navigation card and tab link to Analytics.
+- **Verification**:
+  - 100% passing across 18 test files and 139 automated tests in `apps/api` (145 tests monorepo-wide).
+  - 20 comprehensive unit and integration tests in `apps/api/test/advanced-analytics.test.ts`.
+  - 0 type check errors across all 11 workspace packages and Next.js 16 production build verified clean.
 
-### Milestone 09 — Intelligent Quality Analytics & Reporting
-- **Real-Time Quality Dashboards**: Test execution velocity, pass/fail trends, milestone readiness scores, and defect density heatmaps.
-- **Release Readiness Scorecard**: Algorithmic release gate evaluation combining test coverage, blocker defects, and milestone criteria.
-- **Executive Reports**: Scheduled PDF and CSV report generation for stakeholders.
+---
+
+## 5. Upcoming Milestone Roadmap (10 — 12)
 
 ### Milestone 10 — Integrations & Webhooks
 - **CI/CD Triggers**: GitHub Actions, GitLab CI, and Jenkins integration for triggering test runs and updating commit statuses.

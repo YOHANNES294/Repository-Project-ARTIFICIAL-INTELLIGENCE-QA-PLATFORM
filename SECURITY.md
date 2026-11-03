@@ -131,3 +131,22 @@
   - All ingestion endpoints enforce strict schema validation via Zod, rejecting payloads containing unexpected properties or unauthorized script injections.
 - **Tenant Isolation on Automated Assets**:
   - Test case mappings, automation sessions, unmapped tests, and webhook audit records enforce compound foreign key checks against `projectId` and `organizationId`, preventing cross-tenant leakage.
+
+
+---
+
+## 11. Milestone 09 — Analytics & Export Security
+
+- **OWASP Formula Injection Defense (CWE-1236 / CSV Injection)**:
+  - When spreadsheet applications (Microsoft Excel, LibreOffice Calc, Google Sheets) open CSV or TSV files, cells beginning with certain characters (`=`, `+`, `-`, `@`, `\t`, `\r`) are automatically interpreted as executable formulas, macros, or external DDE commands.
+  - To prevent remote code execution or data exfiltration attacks through generated reports, the `FormulaSanitizer` utility audits every string value before serialization into CSV or XLSX files:
+    - If a cell begins with a dangerous prefix (`=`, `+`, `-`, `@`, `\t`, `\r`), it is safely neutralized by prepending a single quote (`'`), which forces spreadsheet software to render the content strictly as inert text.
+    - Double quotes (`"`) are escaped to `""` per RFC 4180 specifications.
+- **Tenant Isolation on Analytics & Aggregation Services**:
+  - All analytics database queries (test executions, defects, coverage, AI usage, and CI/CD sessions) enforce strict `projectId` and `organizationId` predicate filters.
+  - Users cannot access analytics or reports for projects outside their authorized tenant context, guaranteed by the `requireProjectRole` authorization middleware.
+- **Audit Trails on Report Snapshots & Schedules**:
+  - `ReportSnapshot` records are immutable once generated, preventing retroactive modification of release audit evidence.
+  - Automated report generation and notification dispatches are logged in `ReportDelivery` with recipient tracking and delivery status audits.
+- **Rate-Limiting & Query Performance Protection**:
+  - Date ranges for on-demand aggregation queries are bounded and validated with Zod schemas to prevent computational exhaustion or Denial of Service (DoS) attacks on the database.

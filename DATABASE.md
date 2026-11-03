@@ -654,3 +654,114 @@
 - **Constraints & Indexes**:
   - `@@unique([projectId, eventId])`
   - `@@index([projectId, receivedAt])`
+
+
+---
+
+## 5. Milestone 09: Advanced Analytics & Reporting Models
+
+### 5.1 Test Case Requirement Traceability Extensions
+In support of multi-dimensional coverage analytics, the [`TestCase`](file:///c:/Users/Yoni/Documents/Repository%20Project/ARTIFICIAL%20INTELLIGENCE%20QA%20PLATFORM/database/prisma/schema.prisma) and [`TestCaseVersion`](file:///c:/Users/Yoni/Documents/Repository%20Project/ARTIFICIAL%20INTELLIGENCE%20QA%20PLATFORM/database/prisma/schema.prisma) models were extended:
+- `requirementRef`: String? (External requirement identifier, user story ID, or Jira issue key).
+- `acceptanceCriteria`: String? (Specific conditions of satisfaction for automated coverage verification).
+
+### 5.2 Release Quality Gates
+
+#### `ProjectQualityGate`
+- Configurable rule thresholds evaluated against milestones to determine release readiness.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `projectId`: UUID (Foreign Key -> `Project`, `onDelete: Cascade`)
+  - `name`: String (e.g. "Production Release Sign-off Gate")
+  - `description`: String?
+  - `minTestPassRate`: Float (Default: 95.0)
+  - `maxCriticalDefects`: Int (Default: 0)
+  - `maxHighDefects`: Int (Default: 2)
+  - `minExecutionCoverage`: Float (Default: 90.0)
+  - `requireZeroBlockers`: Boolean (Default: true)
+  - `isBlocking`: Boolean (Default: true)
+  - `createdAt`, `updatedAt`: DateTime
+- **Constraints & Indexes**:
+  - `@@index([projectId])`
+
+### 5.3 Reporting, Snapshots & Schedules
+
+#### `ReportDefinition`
+- Persisted custom report configurations with selected metrics, dimensions, and filter criteria.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `projectId`: UUID (Foreign Key -> `Project`, `onDelete: Cascade`)
+  - `name`: String
+  - `description`: String?
+  - `type`: String (Default: "EXECUTIVE_SUMMARY")
+  - `metrics`: String[]
+  - `dimensions`: String[]
+  - `filters`: JSON (Default: `{}`)
+  - `isTemplate`: Boolean (Default: false)
+  - `createdById`: UUID? (Foreign Key -> `User`, `onDelete: SetNull`)
+  - `createdAt`, `updatedAt`: DateTime
+- **Constraints & Indexes**:
+  - `@@index([projectId, type])`
+
+#### `ReportSnapshot`
+- Immutable, point-in-time frozen snapshots of report aggregations for compliance audits.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `reportDefId`: UUID? (Foreign Key -> `ReportDefinition`, `onDelete: SetNull`)
+  - `projectId`: UUID (Foreign Key -> `Project`, `onDelete: Cascade`)
+  - `name`: String?
+  - `type`: String (Default: "EXECUTIVE_SUMMARY")
+  - `dateRangeStart`, `dateRangeEnd`: DateTime?
+  - `data`: JSON (Frozen raw aggregated payload)
+  - `summary`: JSON? (Key metrics scorecard)
+  - `createdById`: UUID? (Foreign Key -> `User`, `onDelete: SetNull`)
+  - `generatedAt`: DateTime (Default: now)
+- **Constraints & Indexes**:
+  - `@@index([projectId, generatedAt])`
+
+#### `ReportSchedule`
+- Automated recurring report execution specifications.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `reportDefId`: UUID (Foreign Key -> `ReportDefinition`, `onDelete: Cascade`)
+  - `projectId`: UUID (Foreign Key -> `Project`, `onDelete: Cascade`)
+  - `organizationId`: UUID (Foreign Key -> `Organization`, `onDelete: Cascade`)
+  - `name`: String
+  - `frequency`: String (Enum: `DAILY`, `WEEKLY`, `MONTHLY`)
+  - `cronExpression`: String?
+  - `recipients`: String[] (Notification email targets)
+  - `format`: String (Default: "PDF")
+  - `isActive`: Boolean (Default: true)
+  - `lastRunAt`, `nextRunAt`: DateTime?
+  - `createdById`: UUID? (Foreign Key -> `User`, `onDelete: SetNull`)
+  - `createdAt`, `updatedAt`: DateTime
+- **Constraints & Indexes**:
+  - `@@index([projectId, isActive])`
+
+#### `ReportDelivery`
+- Audit trail recording scheduled report generation and notification deliveries.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `scheduleId`: UUID (Foreign Key -> `ReportSchedule`, `onDelete: Cascade`)
+  - `status`: String (Default: "SUCCESS")
+  - `recipient`: String
+  - `errorMessage`: String?
+  - `deliveredAt`: DateTime (Default: now)
+- **Constraints & Indexes**:
+  - `@@index([scheduleId, deliveredAt])`
+
+#### `ReportExportJob`
+- Asynchronous tracking record for large file export operations.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `projectId`: UUID (Foreign Key -> `Project`, `onDelete: Cascade`)
+  - `organizationId`: UUID (Foreign Key -> `Organization`, `onDelete: Cascade`)
+  - `reportType`: String
+  - `format`: String (Default: "CSV")
+  - `status`: String (Default: "PENDING")
+  - `fileKey`: String?
+  - `fileSize`: Int?
+  - `errorMessage`: String?
+  - `createdAt`, `updatedAt`: DateTime
+- **Constraints & Indexes**:
+  - `@@index([projectId, status])`

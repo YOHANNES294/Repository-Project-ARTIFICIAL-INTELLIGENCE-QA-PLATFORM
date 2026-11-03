@@ -133,3 +133,17 @@ The platform provides a dedicated Postman adapter in `integrations/postman`.
 
 ### GitHub Actions CI Workflow
 Sample workflow configuration is available at `.github/workflows/automation-ci.yml`. Webhook notifications can be sent to `/api/v1/projects/:projectId/automation/webhooks/github` with HMAC-SHA256 signature verification.
+
+
+---
+
+## 6. Advanced Analytics & Reporting (Milestone 09)
+
+The platform features an advanced analytics and reporting suite operating directly on live PostgreSQL data:
+- **Executive QA Dashboard**: High-level pass/fail rates, execution coverage %, open defect impact, and release readiness health scores with historical trend comparisons (+/- deltas).
+- **Execution Diagnostics & Flaky Test Detection**: Daily time-series trends, test suite breakdowns, tester workload leaderboards, persistent failure streaks, and explainable outcome-flip flakiness scoring.
+- **Multi-Dimensional Coverage Matrix**: Evaluates existence, execution, requirement reference, and automated code coverage.
+- **Defect Lifecycle & MTTR**: Mean Time to Repair in hours, reopen rates, traceability to test executions, and aging duration distribution buckets (<3d, 3-7d, 8-14d, 15-30d, >30d).
+- **Release Governance & Quality Gates**: Configurable rule-by-rule gates (`minPassRate`, `maxCriticalDefects`, `maxHighDefects`, `minCoverage`, `zeroBlockers`) with automated release verdicts (`READY_FOR_RELEASE`, `WARNING_NEEDS_REVIEW`, `BLOCKED_DO_NOT_RELEASE`).
+- **Custom Reports & Snapshots**: Build custom report templates, freeze immutable historical snapshots for compliance sign-offs, and configure automated recurring schedules (`DAILY`, `WEEKLY`, `MONTHLY`).
+- **Multi-Format Export Engine**: Download reports in sanitized CSV, multi-worksheet Excel (XLSX), or executive scorecard PDF, fortified with OWASP Formula Injection Defense (CWE-1236).
