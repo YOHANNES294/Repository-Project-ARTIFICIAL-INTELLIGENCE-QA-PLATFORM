@@ -765,3 +765,146 @@ In support of multi-dimensional coverage analytics, the [`TestCase`](file:///c:/
   - `createdAt`, `updatedAt`: DateTime
 - **Constraints & Indexes**:
   - `@@index([projectId, status])`
+
+---
+
+## 12. NOTIFICATIONS & EXTERNAL INTEGRATIONS (Milestone 10)
+
+### 12.1 Notification Models
+
+#### `Notification`
+- Primary storage for in-app alerts and notifications across all business domains.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `userId`: UUID (Foreign Key -> `User`, `onDelete: Cascade`)
+  - `organizationId`: UUID? (Foreign Key -> `Organization`, `onDelete: Cascade`)
+  - `projectId`: UUID? (Foreign Key -> `Project`, `onDelete: Cascade`)
+  - `title`: VarChar(255)
+  - `message`: Text
+  - `type`: String (e.g. `DEFECT_ASSIGNED`, `DEFECT_STATUS_CHANGED`, `TEST_RUN_COMPLETED`, `QUALITY_GATE_FAILED`, `SECURITY_ALERT`)
+  - `category`: String (Default: "GENERAL", values: `ASSIGNMENT`, `DEFECT`, `EXECUTION`, `AUTOMATION`, `AI`, `REPORTING`, `SECURITY`, `GENERAL`)
+  - `priority`: String (Default: "NORMAL", values: `LOW`, `NORMAL`, `HIGH`, `URGENT`)
+  - `entityType`: String? (e.g. `DEFECT`, `TEST_RUN`, `MILESTONE`)
+  - `entityId`: String?
+  - `link`: String?
+  - `metadata`: Json?
+  - `isRead`: Boolean (Default: false)
+  - `readAt`: DateTime?
+  - `createdAt`: DateTime (Default: now)
+- **Constraints & Indexes**:
+  - `@@index([userId, isRead])`
+  - `@@index([userId, category])`
+  - `@@index([organizationId])`
+  - `@@index([projectId])`
+
+#### `NotificationDelivery`
+- Channel-specific dispatch status record associated with a parent `Notification`.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `notificationId`: UUID (Foreign Key -> `Notification`, `onDelete: Cascade`)
+  - `channel`: String (`IN_APP`, `EMAIL`, `SLACK`, `TEAMS`, `WEBHOOK`)
+  - `status`: String (Default: "DELIVERED", values: `DELIVERED`, `FAILED`, `SKIPPED`)
+  - `error`: Text?
+  - `deliveredAt`: DateTime (Default: now)
+- **Constraints & Indexes**:
+  - `@@index([notificationId])`
+
+#### `NotificationPreference`
+- User-configurable preference settings for channel toggles, category subscriptions, and quiet hours.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `userId`: UUID (Unique Foreign Key -> `User`, `onDelete: Cascade`)
+  - `emailAlerts`: Boolean (Default: true)
+  - `inAppAlerts`: Boolean (Default: true)
+  - `defectUpdates`: Boolean (Default: true)
+  - `testAssignment`: Boolean (Default: true)
+  - `executionAlerts`: Boolean (Default: true)
+  - `automationAlerts`: Boolean (Default: true)
+  - `aiAlerts`: Boolean (Default: true)
+  - `reportingAlerts`: Boolean (Default: true)
+  - `mentionAlerts`: Boolean (Default: true)
+  - `weeklyDigest`: Boolean (Default: false)
+  - `digestFrequency`: String (Default: "NONE", values: `NONE`, `DAILY`, `WEEKLY`)
+  - `digestTimezone`: String (Default: "UTC")
+  - `quietHoursEnabled`: Boolean (Default: false)
+  - `quietHoursStart`: String? (e.g. "22:00")
+  - `quietHoursEnd`: String? (e.g. "08:00")
+  - `createdAt`, `updatedAt`: DateTime
+
+#### `EmailDelivery`
+- System-wide immutable record of every outbound email transaction.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `organizationId`: UUID? (Foreign Key -> `Organization`, `onDelete: Cascade`)
+  - `userId`: UUID? (Foreign Key -> `User`, `onDelete: SetNull`)
+  - `recipient`: String
+  - `subject`: String
+  - `templateId`: String
+  - `status`: String (Default: "QUEUED", values: `QUEUED`, `SENT`, `DELIVERED`, `FAILED`, `BOUNCED`)
+  - `provider`: String (Default: "LOCAL", values: `RESEND`, `SES`, `SMTP`, `LOCAL`)
+  - `providerMessageId`: String?
+  - `error`: Text?
+  - `sentAt`: DateTime?
+  - `deliveredAt`: DateTime?
+  - `createdAt`: DateTime (Default: now)
+- **Constraints & Indexes**:
+  - `@@index([recipient])`
+  - `@@index([status])`
+  - `@@index([organizationId])`
+
+### 12.2 External Integrations & Webhooks
+
+#### `Integration`
+- External messaging and collaboration connectors (Slack, Microsoft Teams, Generic Webhooks).
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `projectId`: UUID? (Foreign Key -> `Project`, `onDelete: Cascade`)
+  - `organizationId`: UUID? (Foreign Key -> `Organization`, `onDelete: Cascade`)
+  - `name`: String?
+  - `provider`: String (`SLACK`, `TEAMS`, `GITHUB`, `GENERIC_WEBHOOK`)
+  - `status`: String (Default: "DISCONNECTED", values: `CONNECTED`, `DISCONNECTED`, `ERROR`)
+  - `isEnabled`: Boolean (Default: true)
+  - `events`: String[] (Subscribed categories)
+  - `config`: Json (Masked in DTOs, contains webhookUrl, channel, botToken)
+  - `lastSyncAt`: DateTime?
+  - `lastError`: Text?
+  - `createdAt`, `updatedAt`: DateTime
+- **Constraints & Indexes**:
+  - `@@index([projectId])`
+  - `@@index([organizationId])`
+
+#### `Webhook`
+- Outbound event dispatch endpoints signed with HMAC-SHA256.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `organizationId`: UUID (Foreign Key -> `Organization`, `onDelete: Cascade`)
+  - `projectId`: UUID? (Foreign Key -> `Project`, `onDelete: Cascade`)
+  - `name`: String?
+  - `url`: String (SSRF protected)
+  - `secret`: String (Cryptographic signing secret)
+  - `events`: String[]
+  - `isActive`: Boolean (Default: true)
+  - `createdAt`, `updatedAt`: DateTime
+- **Constraints & Indexes**:
+  - `@@index([organizationId])`
+  - `@@index([projectId])`
+
+#### `WebhookDelivery`
+- Telemetry log of outbound webhook dispatches with latency and retry attempt tracking.
+- **Fields**:
+  - `id`: UUID (Primary Key)
+  - `webhookId`: UUID (Foreign Key -> `Webhook`, `onDelete: Cascade`)
+  - `event`: String
+  - `eventId`: UUID
+  - `payload`: Json
+  - `statusCode`: Int?
+  - `responseBody`: Text?
+  - `durationMs`: Int?
+  - `status`: String (Default: "PENDING", values: `PENDING`, `SUCCESS`, `FAILED`, `DEAD_LETTER`)
+  - `attempts`: Int (Default: 1)
+  - `error`: Text?
+  - `createdAt`: DateTime (Default: now)
+- **Constraints & Indexes**:
+  - `@@index([webhookId, status])`
+  - `@@index([eventId])`
+

@@ -21,6 +21,8 @@ import { attachmentRouter } from './attachment.routes.js';
 import { analyticsRouter } from './analytics.routes.js';
 import { defectRouter } from './defect.routes.js';
 import { aiRouter } from './ai.routes.js';
+import { integrationRouter } from './integration.routes.js';
+import { webhookRouter } from './webhook.routes.js';
 
 export const projectRouter: Router = Router();
 
@@ -505,6 +507,11 @@ projectRouter.use('/:projectId/defects', defectRouter);
 
 // Mount Milestone 07 subrouters scoped to project
 projectRouter.use('/:projectId/ai', aiRouter);
+
+// Mount Milestone 10 subrouters scoped to project
+projectRouter.use('/:projectId/integrations', integrationRouter);
+projectRouter.use('/:projectId/webhooks', webhookRouter);
+
 
 
 

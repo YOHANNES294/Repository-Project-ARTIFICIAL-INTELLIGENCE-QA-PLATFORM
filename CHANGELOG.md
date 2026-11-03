@@ -2,6 +2,49 @@
 
 All notable changes to the Artificial Intelligence QA Platform will be documented here.
 
+## [0.10.0] - Milestone 10 Completion: Notifications & External Integrations
+### Added
+- **Centralized Event-Driven Notification Engine**:
+  - Event bus architecture decoupling core domain services from notification dispatching via `NotificationEventPayload`.
+  - `RecipientResolutionService`: Resolves and deduplicates stakeholder recipient IDs based on domain context; drops the acting user to eliminate noise.
+  - `NotificationPreferenceService`: Evaluates category subscriptions, channel master switches, and localized quiet hours (`quietHoursStart`, `quietHoursEnd`) against user timezones.
+  - **Mandatory Security Exemption**: Security-critical notifications unconditionally bypass quiet hours and category opt-outs.
+  - Resilient channel execution: Delivery failures in one channel never fail core business transactions.
+- **Real-Time In-App Notification Center & SSE**:
+  - Express Server-Sent Events stream endpoint (`/api/v1/notifications/stream`) delivering live `notification` and `unread_count` event payloads with 25-second keepalive heartbeats.
+  - Interactive top-bar `NotificationBell` with animated unread badge counter and floating dropdown popover showing recent alerts, 1-click read marks, and category icons.
+  - Dedicated In-App Notification Center (`/notifications`) with category tabs, read/unread filters, search input, pagination, and direct entity link navigation.
+- **User Notification Preferences & Quiet Hours**:
+  - Dedicated preferences editor (`/settings/notifications`) with channel switches (In-App, Email), category matrix toggles, scheduled digest configuration (Daily, Weekly, None), timezone selection, and quiet hours schedule editor.
+  - Factory default reset capabilities.
+- **Provider-Independent Email Delivery & Escaped Templates**:
+  - Pluggable `EmailProviderInterface` supporting `LocalMockEmailProvider` (for testing and dev), `ResendEmailProvider`, and `SmtpEmailProvider`.
+  - Comprehensive responsive HTML and plain-text templates with strict `escapeHtml` sanitization to prevent HTML/XSS injection from user-submitted defect comments or test titles.
+  - Immutable audit trail logging via `EmailDelivery`.
+  - Scheduled daily and weekly executive digest compiler (`DigestService`).
+- **External Chat Integrations & Connectors**:
+  - Reusable integration architecture supporting Slack, Microsoft Teams, and Generic Webhooks with masked secret display.
+  - `SlackAdapter`: Formats rich Block Kit JSON payloads with urgency-styled action buttons.
+  - `TeamsAdapter`: Formats Microsoft Teams Adaptive Cards / MessageCard JSON.
+  - Live connectivity test endpoint (`POST /test`) reporting HTTP status and millisecond latency.
+- **Enterprise Outbound Webhooks & SSRF Defense**:
+  - Webhooks signed with HMAC-SHA256 (`X-AIQA-Signature: sha256=<hex>`), timestamp (`X-AIQA-Timestamp`), and unique delivery UUID (`X-AIQA-Event-ID`) for replay protection.
+  - Cryptographically secure secret generation with one-click secret rotation.
+  - Telemetry delivery logs (`WebhookDelivery`) tracking HTTP codes, latency, and response bodies, with bounded exponential retries and dead-letter queue.
+  - **Mandatory SSRF Defense (`ssrf-guard.ts`)**: Pre-flight validation and DNS resolution blocking loopback (`127.0.0.0/8`, `::1`), private RFC 1918 subnets, link-local and cloud metadata (`169.254.169.254`), multicast, and carrier-grade NAT. Enforces destination re-validation on all redirect hops.
+- **Project Integrations Hub UI**:
+  - Dedicated hub (`/projects/[projectId]/integrations`) with tabbed interface for Team Chat Integrations, Outbound Webhooks, and Delivery History Logs.
+  - Add Integration modal with live connection testing, Add Webhook modal with one-time plain-text secret copy, and Delivery Inspector modal.
+- **Prisma Schema & Relational Models**:
+  - Added models: `NotificationDelivery`, `EmailDelivery`, `WebhookDelivery`.
+  - Enhanced models: `Notification`, `NotificationPreference`, `Integration`, `Webhook`.
+- **Automated Verification**:
+  - 36 comprehensive automated unit and integration tests in `apps/api/test/notifications-integrations.test.ts`.
+  - Full API test suite: 19 test files passed, 175 tests passed, 0 failures.
+  - Monorepo test suite: 181 tests passed across 10 workspace packages (`pnpm -r test`).
+  - Next.js 16 production build verified clean with exit code 0 (`next build --webpack`).
+
+
 ## [0.9.0] - Milestone 09 Completion: Advanced Analytics & Reporting
 ### Added
 - **Mandatory Framework Correction**:

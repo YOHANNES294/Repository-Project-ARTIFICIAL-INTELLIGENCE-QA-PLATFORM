@@ -490,3 +490,48 @@ Base route: `/api/v1/projects/:projectId/automation`
   - Formats: `CSV`, `XLSX` (Excel), `PDF` (Executive Scorecard)
   - Supported report types: `EXECUTIVE_SUMMARY`, `TEST_EXECUTION`, `DEFECT_SUMMARY`, `COVERAGE_MATRIX`, `AUTOMATION_METRICS`, `QUALITY_GATE_AUDIT`, `AI_USAGE`
   - Headers set appropriately: `Content-Disposition: attachment; filename="..."`, `Content-Type: text/csv | application/vnd.openxmlformats-officedocument.spreadsheetml.sheet | application/pdf`
+
+---
+
+## 12. Notifications, Preferences, Integrations & Webhooks (Milestone 10)
+
+### 12.1 In-App Notifications & Real-Time SSE
+- `GET /api/v1/notifications`: List notifications for current user with category and read status filtering:
+  - Query parameters: `page`, `limit`, `isRead` (`all` | `true` | `false`), `category`, `priority`, `search`
+  - Includes delivery status records (`IN_APP`, `EMAIL`, `SLACK`, `TEAMS`, `WEBHOOK`)
+- `GET /api/v1/notifications/unread-count`: Returns `{ count: number }` for top-bar badge display.
+- `PATCH /api/v1/notifications/:id/read`: Marks a single notification as read and updates timestamp.
+- `POST /api/v1/notifications/mark-all-read`: Marks all unread notifications as read.
+- `DELETE /api/v1/notifications/:id`: Dismisses/deletes a notification.
+- `GET /api/v1/notifications/stream`: Server-Sent Events (SSE) connection endpoint delivering real-time `notification` and `unread_count` pushes with 25-second keepalive heartbeats.
+- `POST /api/v1/notifications/test-dispatch`: Dispatches an immediate test notification for diagnostics.
+- `GET /api/v1/notifications/admin/stats`: Aggregates delivery performance across in-app, emails, and webhooks.
+
+### 12.2 User Notification Preferences & Quiet Hours
+- `GET /api/v1/notifications/preferences`: Retrieves user preference configuration (creates defaults if missing).
+- `PUT /api/v1/notifications/preferences`: Updates delivery channel toggles, event categories, and quiet hours:
+  - Channels: `inAppAlerts`, `emailAlerts`
+  - Categories: `defectUpdates`, `testAssignment`, `executionAlerts`, `automationAlerts`, `aiAlerts`, `reportingAlerts`, `mentionAlerts`
+  - Scheduled Digest: `digestFrequency` (`NONE` | `DAILY` | `WEEKLY`), `digestTimezone`
+  - Quiet Hours: `quietHoursEnabled`, `quietHoursStart` (`HH:MM`), `quietHoursEnd` (`HH:MM`)
+- `POST /api/v1/notifications/preferences/reset`: Resets all preferences back to factory defaults.
+- **Mandatory Security Exemption**: Security notifications (`password changes`, `auth events`, `token revocations`) bypass quiet hours and category opt-outs unconditionally.
+
+### 12.3 External Chat & App Integrations
+- `GET /api/v1/projects/:projectId/integrations`: Lists active team integrations for the project.
+- `POST /api/v1/projects/:projectId/integrations`: Creates a new integration with strict SSRF pre-flight validation.
+- `GET /api/v1/projects/:projectId/integrations/:id`: Retrieves integration metadata with masked webhook secrets.
+- `PATCH /api/v1/projects/:projectId/integrations/:id`: Updates integration configuration or event subscriptions.
+- `DELETE /api/v1/projects/:projectId/integrations/:id`: Removes an integration.
+- `POST /api/v1/projects/:projectId/integrations/test`: Performs a live connectivity test with latency metrics.
+
+### 12.4 Outbound Webhooks & HMAC-SHA256 Delivery
+- `GET /api/v1/projects/:projectId/webhooks`: Lists registered outbound webhooks for the project.
+- `POST /api/v1/projects/:projectId/webhooks`: Registers a webhook; generates a secure secret and returns it once in plain text.
+- `GET /api/v1/projects/:projectId/webhooks/:id`: Retrieves webhook details with masked secret.
+- `PATCH /api/v1/projects/:projectId/webhooks/:id`: Updates webhook destination URL or subscribed event list.
+- `DELETE /api/v1/projects/:projectId/webhooks/:id`: Deletes an outbound webhook and cascades deliveries.
+- `POST /api/v1/projects/:projectId/webhooks/:id/rotate-secret`: Rotates signing secret and returns the new secret.
+- `GET /api/v1/projects/:projectId/webhooks/:id/deliveries`: Lists delivery logs including payload, status, HTTP code, latency, and error message.
+- `POST /api/v1/projects/:projectId/webhooks/:id/deliveries/:deliveryId/retry`: Retries a failed or dead-letter delivery.
+

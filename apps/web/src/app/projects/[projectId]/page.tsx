@@ -33,6 +33,7 @@ import {
   Bug,
   Cpu,
   BarChart3,
+  Plug,
 } from 'lucide-react';
 
 export default function ProjectDetailPage() {
@@ -273,6 +274,7 @@ export default function ProjectDetailPage() {
             { id: 'suites', label: 'Test Suites', icon: FolderTree, href: `/projects/${projectId}/test-suites` },
             { id: 'milestones', label: 'Milestones', icon: Milestone, href: `/projects/${projectId}/milestones` },
             { id: 'environments', label: `Environments (${project.environments?.length || 0})`, icon: Server, href: null },
+            { id: 'integrations', label: 'Integrations & Webhooks', icon: Plug, href: `/projects/${projectId}/integrations` },
             { id: 'members', label: 'Team Members', icon: Users, href: null },
             { id: 'activity', label: 'Activity History', icon: Activity, href: null },
             { id: 'settings', label: 'Settings', icon: Settings, href: null },
@@ -475,6 +477,22 @@ export default function ProjectDetailPage() {
                   </h4>
                   <p className="text-xs text-slate-500 mt-1">
                     Executive dashboards, quality gates, flakiness, coverage, exports & historical snapshots
+                  </p>
+                </Link>
+
+                <Link
+                  href={`/projects/${projectId}/integrations`}
+                  className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:border-purple-500 hover:shadow-md transition-all group"
+                >
+                  <div className="p-2.5 rounded-lg bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 w-fit mb-3 group-hover:scale-105 transition-transform">
+                    <Plug className="h-5 w-5" />
+                  </div>
+                  <h4 className="font-bold text-slate-900 dark:text-white text-sm flex items-center justify-between">
+                    Integrations & Webhooks
+                    <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-purple-600 transition-colors" />
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Slack channels, MS Teams adaptive cards, HMAC outbound webhooks & delivery telemetry
                   </p>
                 </Link>
               </div>

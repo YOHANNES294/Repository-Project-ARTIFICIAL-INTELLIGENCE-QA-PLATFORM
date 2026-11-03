@@ -935,3 +935,104 @@ export type CreateReportScheduleInputSchema = z.infer<typeof createReportSchedul
 export type CreateProjectQualityGateInputSchema = z.infer<typeof createProjectQualityGateSchema>;
 export type UpdateProjectQualityGateInputSchema = z.infer<typeof updateProjectQualityGateSchema>;
 export type ExportReportInputSchema = z.infer<typeof exportReportSchema>;
+
+// ====================================================
+// MILESTONE 10 — NOTIFICATIONS & EXTERNAL INTEGRATIONS
+// ====================================================
+
+export const notificationCategoryEnum = z.enum([
+  'ASSIGNMENT',
+  'DEFECT',
+  'EXECUTION',
+  'AUTOMATION',
+  'AI',
+  'REPORTING',
+  'SECURITY',
+  'GENERAL',
+]);
+
+export const notificationPriorityEnum = z.enum(['LOW', 'NORMAL', 'HIGH', 'URGENT']);
+
+export const digestFrequencyEnum = z.enum(['NONE', 'DAILY', 'WEEKLY']);
+
+export const integrationProviderEnum = z.enum([
+  'SLACK',
+  'TEAMS',
+  'GITHUB',
+  'GENERIC_WEBHOOK',
+]);
+
+export const integrationStatusEnum = z.enum(['CONNECTED', 'DISCONNECTED', 'ERROR']);
+
+export const updateNotificationPreferencesSchema = z.object({
+  emailAlerts: z.boolean().optional(),
+  inAppAlerts: z.boolean().optional(),
+  defectUpdates: z.boolean().optional(),
+  testAssignment: z.boolean().optional(),
+  executionAlerts: z.boolean().optional(),
+  automationAlerts: z.boolean().optional(),
+  aiAlerts: z.boolean().optional(),
+  reportingAlerts: z.boolean().optional(),
+  mentionAlerts: z.boolean().optional(),
+  weeklyDigest: z.boolean().optional(),
+  digestFrequency: digestFrequencyEnum.optional(),
+  digestTimezone: z.string().max(100).optional(),
+  quietHoursEnabled: z.boolean().optional(),
+  quietHoursStart: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Must be in HH:MM format (e.g. 22:00)').optional().nullable(),
+  quietHoursEnd: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Must be in HH:MM format (e.g. 08:00)').optional().nullable(),
+});
+
+export const notificationQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  isRead: z.enum(['true', 'false', 'all']).optional().default('all'),
+  category: notificationCategoryEnum.optional(),
+  priority: notificationPriorityEnum.optional(),
+  search: z.string().max(200).optional(),
+});
+
+export const createIntegrationSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters').max(100).optional(),
+  provider: integrationProviderEnum,
+  events: z.array(z.string()).default([]),
+  config: z.record(z.any()),
+  isEnabled: z.boolean().default(true),
+});
+
+export const updateIntegrationSchema = z.object({
+  name: z.string().min(2).max(100).optional(),
+  events: z.array(z.string()).optional(),
+  config: z.record(z.any()).optional(),
+  isEnabled: z.boolean().optional(),
+  status: integrationStatusEnum.optional(),
+});
+
+export const testIntegrationSchema = z.object({
+  provider: integrationProviderEnum,
+  config: z.record(z.any()),
+});
+
+export const createWebhookSchema = z.object({
+  name: z.string().min(2).max(100).optional(),
+  url: z.string().url('Must be a valid HTTP or HTTPS URL').max(1000),
+  secret: z.string().min(8, 'Secret must be at least 8 characters').max(256).optional(),
+  events: z.array(z.string()).min(1, 'Select at least one event'),
+  isActive: z.boolean().default(true),
+});
+
+export const updateWebhookSchema = z.object({
+  name: z.string().min(2).max(100).optional(),
+  url: z.string().url().max(1000).optional(),
+  secret: z.string().min(8).max(256).optional(),
+  events: z.array(z.string()).min(1).optional(),
+  isActive: z.boolean().optional(),
+});
+
+export type UpdateNotificationPreferencesSchema = z.infer<typeof updateNotificationPreferencesSchema>;
+export type NotificationQuerySchema = z.infer<typeof notificationQuerySchema>;
+export type CreateIntegrationSchema = z.infer<typeof createIntegrationSchema>;
+export type UpdateIntegrationSchema = z.infer<typeof updateIntegrationSchema>;
+export type TestIntegrationSchema = z.infer<typeof testIntegrationSchema>;
+export type CreateWebhookSchema = z.infer<typeof createWebhookSchema>;
+export type UpdateWebhookSchema = z.infer<typeof updateWebhookSchema>;
+

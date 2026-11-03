@@ -10,6 +10,7 @@ import { authRouter } from './routes/auth.routes.js';
 import { organizationRouter } from './routes/org.routes.js';
 import { projectRouter } from './routes/project.routes.js';
 import automationRouter from './routes/automation.routes.js';
+import { notificationRouter } from './routes/notification.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -51,6 +52,7 @@ export function createApp(): Express {
   // Base API routes
   app.use('/api/v1', healthRouter);
   app.use('/api/v1/auth', authRouter);
+  app.use('/api/v1/notifications', notificationRouter);
   app.use('/api/v1/organizations', organizationRouter);
   app.use('/api/v1/projects/:projectId/automation', automationRouter);
   app.use('/api/v1/projects', projectRouter);

@@ -16,6 +16,7 @@ import {
   CreateDefectCommentInput,
   LinkDefectTestInput,
 } from '@ai-qa/shared-types';
+import { NotificationService } from './notifications/index.js';
 
 export class DefectService {
   // ----------------------------------------------------
@@ -327,9 +328,33 @@ export class DefectService {
       return newDefect;
     });
 
+    const key = `${project.key}-BUG-${defect.defectNumber}`;
+    if (defect.assigneeId) {
+      NotificationService.dispatch({
+        organizationId: project.organizationId,
+        projectId,
+        recipientUserIds: [defect.assigneeId],
+        actorId: userId,
+        title: `Assigned Defect: ${key}`,
+        message: defect.title,
+        type: 'DEFECT_ASSIGNED',
+        category: 'DEFECT',
+        priority: defect.priority === 'URGENT' || defect.priority === 'CRITICAL' ? 'URGENT' : 'NORMAL',
+        entityType: 'DEFECT',
+        entityId: defect.id,
+        link: `/projects/${projectId}/defects/${defect.id}`,
+        metadata: {
+          defectKey: key,
+          severity: defect.severity,
+          priority: defect.priority,
+          projectName: project.key,
+        },
+      }).catch(() => {});
+    }
+
     return {
       ...defect,
-      key: `${defect.project.key}-BUG-${defect.defectNumber}`,
+      key,
     };
   } catch (err: any) {
     if (err.code === 'P2002' && attempts < 5) {
@@ -548,6 +573,8 @@ throw new Error('Failed to generate unique defect number after multiple attempts
       throw new ValidationError('Reason is required when reopening a defect');
     }
 
+    let prevStatus: DefectStatus | null = null;
+
     // Atomic transaction for concurrency safety and cycle prevention
     const updated = await prisma.$transaction(async (tx: any) => {
       const defect = await tx.defect.findUnique({
@@ -560,6 +587,7 @@ throw new Error('Failed to generate unique defect number after multiple attempts
       }
 
       const currentStatus = defect.status;
+      prevStatus = currentStatus;
 
       // Validate allowed transition atomically against latest database state
       const allowed = (this.VALID_TRANSITIONS as Record<string, DefectStatus[]>)[currentStatus] || [];
@@ -669,9 +697,32 @@ throw new Error('Failed to generate unique defect number after multiple attempts
       return res;
     });
 
+    const key = `${updated.project.key}-BUG-${updated.defectNumber}`;
+
+    if (prevStatus && prevStatus !== targetStatus) {
+      NotificationService.dispatch({
+        projectId,
+        entityType: 'DEFECT',
+        entityId: updated.id,
+        actorId: userId,
+        title: `Defect ${key} Status: ${targetStatus}`,
+        message: `Status transitioned from ${prevStatus} to ${targetStatus}${input.reason ? `: ${input.reason}` : ''}`,
+        type: 'DEFECT_STATUS_CHANGED',
+        category: 'DEFECT',
+        priority: 'NORMAL',
+        link: `/projects/${projectId}/defects/${updated.id}`,
+        metadata: {
+          defectKey: key,
+          oldStatus: prevStatus,
+          newStatus: targetStatus,
+          projectName: updated.project.key,
+        },
+      }).catch(() => {});
+    }
+
     return {
       ...updated,
-      key: `${updated.project.key}-BUG-${updated.defectNumber}`,
+      key,
     };
   }
 
@@ -740,9 +791,33 @@ throw new Error('Failed to generate unique defect number after multiple attempts
       return res;
     });
 
+    const key = `${updated.project.key}-BUG-${updated.defectNumber}`;
+
+    if (input.assigneeId && input.assigneeId !== defect.assigneeId) {
+      NotificationService.dispatch({
+        projectId,
+        recipientUserIds: [input.assigneeId],
+        actorId: userId,
+        title: `Assigned Defect: ${key}`,
+        message: updated.title,
+        type: 'DEFECT_ASSIGNED',
+        category: 'DEFECT',
+        priority: updated.priority === 'URGENT' || updated.priority === 'CRITICAL' ? 'URGENT' : 'NORMAL',
+        entityType: 'DEFECT',
+        entityId: updated.id,
+        link: `/projects/${projectId}/defects/${updated.id}`,
+        metadata: {
+          defectKey: key,
+          severity: updated.severity,
+          priority: updated.priority,
+          projectName: updated.project.key,
+        },
+      }).catch(() => {});
+    }
+
     return {
       ...updated,
-      key: `${updated.project.key}-BUG-${updated.defectNumber}`,
+      key,
     };
   }
 

@@ -104,6 +104,19 @@ import {
   CreateProjectQualityGateInput,
   UpdateProjectQualityGateInput,
   ExportReportInput,
+  NotificationDto,
+  NotificationPreferenceDto,
+  NotificationStatsDto,
+  UpdateNotificationPreferencesInput,
+  IntegrationDto,
+  CreateIntegrationInput,
+  UpdateIntegrationInput,
+  TestIntegrationInput,
+  TestIntegrationResultDto,
+  WebhookDto,
+  CreateWebhookInput,
+  UpdateWebhookInput,
+  WebhookDeliveryDto,
 } from '@ai-qa/shared-types';
 
 export interface ProjectListParams {
@@ -1770,6 +1783,205 @@ export class ApiClient {
       throw new Error(`Export failed with HTTP ${res.status}`);
     }
     return res.blob();
+  }
+
+  // ====================================================
+  // MILESTONE 10 — NOTIFICATIONS & EXTERNAL INTEGRATIONS
+  // ====================================================
+
+  async getNotifications(params?: {
+    page?: number;
+    limit?: number;
+    isRead?: string;
+    category?: string;
+    priority?: string;
+    search?: string;
+  }): Promise<{ items: NotificationDto[]; total: number; page: number; limit: number; totalPages: number }> {
+    const query = new URLSearchParams();
+    if (params?.page) query.set('page', params.page.toString());
+    if (params?.limit) query.set('limit', params.limit.toString());
+    if (params?.isRead) query.set('isRead', params.isRead);
+    if (params?.category) query.set('category', params.category);
+    if (params?.priority) query.set('priority', params.priority);
+    if (params?.search) query.set('search', params.search);
+
+    const qs = query.toString();
+    const endpoint = `/notifications${qs ? `?${qs}` : ''}`;
+    const res = await this.request<any>(endpoint);
+    return {
+      items: res.data || [],
+      total: res.meta?.total || 0,
+      page: res.meta?.page || 1,
+      limit: res.meta?.limit || 20,
+      totalPages: res.meta?.totalPages || 1,
+    };
+  }
+
+  async getUnreadNotificationCount(): Promise<{ count: number }> {
+    return this.request<{ count: number }>('/notifications/unread-count');
+  }
+
+  async markNotificationAsRead(id: string): Promise<NotificationDto> {
+    return this.request<NotificationDto>(`/notifications/${id}/read`, {
+      method: 'PATCH',
+    });
+  }
+
+  async markAllNotificationsAsRead(organizationId?: string): Promise<{ count: number }> {
+    const qs = organizationId ? `?organizationId=${organizationId}` : '';
+    return this.request<{ count: number }>(`/notifications/mark-all-read${qs}`, {
+      method: 'POST',
+    });
+  }
+
+  async deleteNotification(id: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/notifications/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getNotificationPreferences(): Promise<NotificationPreferenceDto> {
+    return this.request<NotificationPreferenceDto>('/notifications/preferences');
+  }
+
+  async updateNotificationPreferences(
+    payload: UpdateNotificationPreferencesInput
+  ): Promise<NotificationPreferenceDto> {
+    return this.request<NotificationPreferenceDto>('/notifications/preferences', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async resetNotificationPreferences(): Promise<NotificationPreferenceDto> {
+    return this.request<NotificationPreferenceDto>('/notifications/preferences/reset', {
+      method: 'POST',
+    });
+  }
+
+  async getNotificationDeliveryStats(organizationId?: string): Promise<NotificationStatsDto> {
+    const qs = organizationId ? `?organizationId=${organizationId}` : '';
+    return this.request<NotificationStatsDto>(`/notifications/admin/stats${qs}`);
+  }
+
+  async testNotificationDispatch(payload?: {
+    title?: string;
+    message?: string;
+    category?: string;
+    priority?: string;
+  }): Promise<any> {
+    return this.request<any>('/notifications/test-dispatch', {
+      method: 'POST',
+      body: JSON.stringify(payload || {}),
+    });
+  }
+
+  // Integrations
+  async getProjectIntegrations(projectId: string): Promise<IntegrationDto[]> {
+    return this.request<IntegrationDto[]>(`/projects/${projectId}/integrations`);
+  }
+
+  async getOrgIntegrations(orgId: string): Promise<IntegrationDto[]> {
+    return this.request<IntegrationDto[]>(`/organizations/${orgId}/integrations`);
+  }
+
+  async createProjectIntegration(
+    projectId: string,
+    payload: CreateIntegrationInput
+  ): Promise<IntegrationDto> {
+    return this.request<IntegrationDto>(`/projects/${projectId}/integrations`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateIntegration(
+    id: string,
+    payload: UpdateIntegrationInput,
+    projectId?: string
+  ): Promise<IntegrationDto> {
+    const prefix = projectId ? `/projects/${projectId}/integrations` : `/notifications/integrations`;
+    return this.request<IntegrationDto>(`${prefix}/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteIntegration(id: string, projectId?: string): Promise<{ message: string }> {
+    const prefix = projectId ? `/projects/${projectId}/integrations` : `/notifications/integrations`;
+    return this.request<{ message: string }>(`${prefix}/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async testIntegration(payload: TestIntegrationInput, projectId?: string): Promise<TestIntegrationResultDto> {
+    const prefix = projectId ? `/projects/${projectId}/integrations` : `/notifications/integrations`;
+    return this.request<TestIntegrationResultDto>(`${prefix}/test`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  // Webhooks
+  async getProjectWebhooks(projectId: string): Promise<WebhookDto[]> {
+    return this.request<WebhookDto[]>(`/projects/${projectId}/webhooks`);
+  }
+
+  async createProjectWebhook(
+    projectId: string,
+    payload: CreateWebhookInput
+  ): Promise<WebhookDto & { rawSecret: string }> {
+    return this.request<WebhookDto & { rawSecret: string }>(`/projects/${projectId}/webhooks`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateWebhook(
+    id: string,
+    payload: UpdateWebhookInput,
+    projectId?: string
+  ): Promise<WebhookDto> {
+    const prefix = projectId ? `/projects/${projectId}/webhooks` : `/webhooks`;
+    return this.request<WebhookDto>(`${prefix}/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteWebhook(id: string, projectId?: string): Promise<{ message: string }> {
+    const prefix = projectId ? `/projects/${projectId}/webhooks` : `/webhooks`;
+    return this.request<{ message: string }>(`${prefix}/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async rotateWebhookSecret(id: string, projectId?: string): Promise<{ newSecret: string }> {
+    const prefix = projectId ? `/projects/${projectId}/webhooks` : `/webhooks`;
+    return this.request<{ newSecret: string }>(`${prefix}/${id}/rotate-secret`, {
+      method: 'POST',
+    });
+  }
+
+  async getWebhookDeliveries(
+    webhookId: string,
+    projectId?: string,
+    limit?: number
+  ): Promise<WebhookDeliveryDto[]> {
+    const prefix = projectId ? `/projects/${projectId}/webhooks` : `/webhooks`;
+    const qs = limit ? `?limit=${limit}` : '';
+    return this.request<WebhookDeliveryDto[]>(`${prefix}/${webhookId}/deliveries${qs}`);
+  }
+
+  async retryWebhookDelivery(
+    webhookId: string,
+    deliveryId: string,
+    projectId?: string
+  ): Promise<WebhookDeliveryDto> {
+    const prefix = projectId ? `/projects/${projectId}/webhooks` : `/webhooks`;
+    return this.request<WebhookDeliveryDto>(`${prefix}/${webhookId}/deliveries/${deliveryId}/retry`, {
+      method: 'POST',
+    });
   }
 }
 

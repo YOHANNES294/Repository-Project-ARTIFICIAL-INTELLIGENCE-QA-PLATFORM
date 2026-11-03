@@ -2085,3 +2085,282 @@ export interface ExportReportInput {
   filters?: Record<string, unknown>;
   name?: string;
 }
+
+// ====================================================
+// MILESTONE 10 — NOTIFICATIONS & EXTERNAL INTEGRATIONS
+// ====================================================
+
+export enum NotificationCategory {
+  ASSIGNMENT = 'ASSIGNMENT',
+  DEFECT = 'DEFECT',
+  EXECUTION = 'EXECUTION',
+  AUTOMATION = 'AUTOMATION',
+  AI = 'AI',
+  REPORTING = 'REPORTING',
+  SECURITY = 'SECURITY',
+  GENERAL = 'GENERAL',
+}
+
+export enum NotificationPriority {
+  LOW = 'LOW',
+  NORMAL = 'NORMAL',
+  HIGH = 'HIGH',
+  URGENT = 'URGENT',
+}
+
+export enum NotificationChannel {
+  IN_APP = 'IN_APP',
+  EMAIL = 'EMAIL',
+  SLACK = 'SLACK',
+  TEAMS = 'TEAMS',
+  WEBHOOK = 'WEBHOOK',
+}
+
+export enum NotificationDeliveryStatus {
+  DELIVERED = 'DELIVERED',
+  FAILED = 'FAILED',
+  SKIPPED = 'SKIPPED',
+}
+
+export enum DigestFrequency {
+  NONE = 'NONE',
+  DAILY = 'DAILY',
+  WEEKLY = 'WEEKLY',
+}
+
+export enum EmailDeliveryStatus {
+  QUEUED = 'QUEUED',
+  SENT = 'SENT',
+  DELIVERED = 'DELIVERED',
+  FAILED = 'FAILED',
+  BOUNCED = 'BOUNCED',
+}
+
+export enum EmailProvider {
+  RESEND = 'RESEND',
+  SES = 'SES',
+  SMTP = 'SMTP',
+  LOCAL = 'LOCAL',
+}
+
+export enum IntegrationProvider {
+  SLACK = 'SLACK',
+  TEAMS = 'TEAMS',
+  GITHUB = 'GITHUB',
+  GENERIC_WEBHOOK = 'GENERIC_WEBHOOK',
+}
+
+export enum IntegrationStatus {
+  CONNECTED = 'CONNECTED',
+  DISCONNECTED = 'DISCONNECTED',
+  ERROR = 'ERROR',
+}
+
+export enum WebhookDeliveryStatus {
+  PENDING = 'PENDING',
+  SUCCESS = 'SUCCESS',
+  FAILED = 'FAILED',
+  DEAD_LETTER = 'DEAD_LETTER',
+}
+
+export interface NotificationDeliveryDto {
+  id: string;
+  notificationId: string;
+  channel: NotificationChannel | string;
+  status: NotificationDeliveryStatus | string;
+  error?: string | null;
+  deliveredAt: string;
+}
+
+export interface NotificationDto {
+  id: string;
+  userId: string;
+  organizationId?: string | null;
+  projectId?: string | null;
+  title: string;
+  message: string;
+  type: string;
+  category: NotificationCategory | string;
+  priority: NotificationPriority | string;
+  entityType?: string | null;
+  entityId?: string | null;
+  link?: string | null;
+  metadata?: Record<string, unknown> | null;
+  isRead: boolean;
+  readAt?: string | null;
+  createdAt: string;
+  deliveries?: NotificationDeliveryDto[];
+}
+
+export interface NotificationPreferenceDto {
+  id: string;
+  userId: string;
+  emailAlerts: boolean;
+  inAppAlerts: boolean;
+  defectUpdates: boolean;
+  testAssignment: boolean;
+  executionAlerts: boolean;
+  automationAlerts: boolean;
+  aiAlerts: boolean;
+  reportingAlerts: boolean;
+  mentionAlerts: boolean;
+  weeklyDigest: boolean;
+  digestFrequency: DigestFrequency | string;
+  digestTimezone: string;
+  quietHoursEnabled: boolean;
+  quietHoursStart?: string | null;
+  quietHoursEnd?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpdateNotificationPreferencesInput {
+  emailAlerts?: boolean;
+  inAppAlerts?: boolean;
+  defectUpdates?: boolean;
+  testAssignment?: boolean;
+  executionAlerts?: boolean;
+  automationAlerts?: boolean;
+  aiAlerts?: boolean;
+  reportingAlerts?: boolean;
+  mentionAlerts?: boolean;
+  weeklyDigest?: boolean;
+  digestFrequency?: DigestFrequency | string;
+  digestTimezone?: string;
+  quietHoursEnabled?: boolean;
+  quietHoursStart?: string | null;
+  quietHoursEnd?: string | null;
+}
+
+export interface EmailDeliveryDto {
+  id: string;
+  organizationId?: string | null;
+  userId?: string | null;
+  recipient: string;
+  subject: string;
+  templateId: string;
+  status: EmailDeliveryStatus | string;
+  provider: EmailProvider | string;
+  providerMessageId?: string | null;
+  error?: string | null;
+  sentAt?: string | null;
+  deliveredAt?: string | null;
+  createdAt: string;
+}
+
+export interface NotificationStatsDto {
+  totalInApp: number;
+  unreadInApp: number;
+  totalEmails: number;
+  sentEmails: number;
+  failedEmails: number;
+  totalWebhooksSent: number;
+  failedWebhooks: number;
+}
+
+export interface IntegrationDto {
+  id: string;
+  projectId?: string | null;
+  organizationId?: string | null;
+  name?: string | null;
+  provider: IntegrationProvider | string;
+  status: IntegrationStatus | string;
+  isEnabled: boolean;
+  events: string[];
+  config: Record<string, unknown>;
+  lastSyncAt?: string | null;
+  lastError?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateIntegrationInput {
+  name?: string;
+  provider: IntegrationProvider | string;
+  events?: string[];
+  config: Record<string, unknown>;
+  isEnabled?: boolean;
+}
+
+export interface UpdateIntegrationInput {
+  name?: string;
+  events?: string[];
+  config?: Record<string, unknown>;
+  isEnabled?: boolean;
+  status?: IntegrationStatus | string;
+}
+
+export interface TestIntegrationInput {
+  provider: IntegrationProvider | string;
+  config: Record<string, unknown>;
+}
+
+export interface TestIntegrationResultDto {
+  success: boolean;
+  message: string;
+  statusCode?: number;
+  latencyMs?: number;
+}
+
+export interface WebhookDto {
+  id: string;
+  organizationId: string;
+  projectId?: string | null;
+  name?: string | null;
+  url: string;
+  secretMasked?: string;
+  events: string[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  deliveriesCount?: number;
+}
+
+export interface CreateWebhookInput {
+  name?: string;
+  url: string;
+  secret?: string;
+  events: string[];
+  isActive?: boolean;
+}
+
+export interface UpdateWebhookInput {
+  name?: string;
+  url?: string;
+  secret?: string;
+  events?: string[];
+  isActive?: boolean;
+}
+
+export interface WebhookDeliveryDto {
+  id: string;
+  webhookId: string;
+  event: string;
+  eventId: string;
+  payload: Record<string, unknown>;
+  statusCode?: number | null;
+  responseBody?: string | null;
+  durationMs?: number | null;
+  status: WebhookDeliveryStatus | string;
+  attempts: number;
+  error?: string | null;
+  createdAt: string;
+}
+
+export interface NotificationEventPayload {
+  organizationId?: string;
+  projectId?: string;
+  recipientUserIds?: string[];
+  title: string;
+  message: string;
+  type: string;
+  category: NotificationCategory | string;
+  priority?: NotificationPriority | string;
+  entityType?: string;
+  entityId?: string;
+  link?: string;
+  metadata?: Record<string, unknown>;
+  actorId?: string;
+  forceBypassPreferences?: boolean;
+}
+

@@ -155,3 +155,56 @@ Quality gates govern continuous delivery by verifying release criteria:
 ### 6.5 Export Architecture & Formula Injection Defense
 - **Multi-Format Streaming**: Generates sanitized CSVs, multi-worksheet Excel spreadsheets via SheetJS (`xlsx`), and branded corporate scorecard PDFs via `pdfkit` (valid `%PDF-` signature).
 - **OWASP CWE-1236 Sanitization**: The `FormulaSanitizer` utility neutralizes dynamic formula execution triggers (`=`, `+`, `-`, `@`, `\t`, `\r`) by prepending a single quote before file compilation.
+
+---
+
+## 7. Notifications & External Integrations Architecture (Milestone 10)
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                   Notification & Integration Pipeline                  │
+├──────────────┬──────────────────┬─────────────────┬────────────────────┤
+│ 1. Business  │ 2. Recipient     │ 3. User Prefs   │ 4. Multi-Channel   │
+│    Event     │    Resolution    │    & Quiet Hours│    Dispatch Engine │
+│    Trigger   │   (Deduplication │   (Security     │   (In-App, Email,  │
+│  (Defect, TR)│    & Actor Drop) │    Override)    │    Slack, Webhook) │
+└──────────────┴──────────────────┴─────────────────┴────────────────────┘
+```
+
+### 7.1 Central Event-Driven Architecture
+The notification system is decoupled from core domain services through an asynchronous, event-driven pipeline:
+1. **Business Event Emitted**: Domain actions (e.g., `createDefect`, `transitionStatus`, `completeTestRun`) emit a typed `NotificationEventPayload`.
+2. **Recipient Resolution & Actor Exclusion**: `RecipientResolutionService` identifies relevant stakeholders based on defect assignees, test run owners, and entity creators. The actor who initiated the event is automatically omitted so users do not receive noise for their own actions.
+3. **Preference & Quiet Hours Evaluation**:
+   - `NotificationPreferenceService` evaluates category opt-ins (`defectUpdates`, `testAssignment`, etc.) and quiet hour intervals in the user's localized timezone.
+   - **Mandatory Security Exemption**: Security notifications unconditionally bypass user quiet hours and preference suppressions.
+4. **Channel Isolation & Fault Tolerance**: In-app notifications, emails, team messages, and outbound webhooks execute in isolated, guarded blocks. A failure or timeout in an external webhook endpoint or email provider will **never** cause a business transaction to fail or roll back.
+
+### 7.2 Real-Time Server-Sent Events (SSE) Engine
+- The API provides a real-time streaming endpoint at `/api/v1/notifications/stream`.
+- Express manages persistent HTTP connections with `text/event-stream`, pushing discrete `notification` and `unread_count` event payloads immediately upon dispatch.
+- Emits keepalive heartbeats every 25 seconds to keep proxies and firewalls open.
+- The web frontend pairs SSE with automatic reconnection and a 30-second interval fallback poll to guarantee delivery under all network conditions.
+
+### 7.3 Multi-Channel Email Architecture
+- **Provider-Independent Adapters**: Unified `EmailProviderInterface` with pluggable implementations (`LocalMockEmailProvider` for testing and local dev; `ResendEmailProvider` and `SmtpEmailProvider` for cloud production).
+- **Responsive HTML & Plain-Text Templates**: High-fidelity templates with strict HTML escaping (`escapeHtml`) to eradicate HTML injection and XSS from user-submitted defect descriptions or comments.
+- **Delivery Audit Trail**: Every outbound email records an immutable `EmailDelivery` entry tracking provider message IDs, timestamps, and delivery states (`QUEUED`, `SENT`, `DELIVERED`, `FAILED`, `BOUNCED`).
+- **Scheduled Digests**: The `DigestService` compiles daily or weekly quality summaries for subscribed users.
+
+### 7.4 SSRF Defense & Network Security
+To prevent Server-Side Request Forgery (SSRF) when communicating with external URLs:
+1. **Pre-flight Scheme & Credential Validation**: Strictly enforces `http:` and `https:`. Rejects embedded user credentials (`user:pass@host`).
+2. **DNS Pre-Resolution**: Resolves hostnames to all IPv4 and IPv6 addresses prior to socket connection.
+3. **Address Space Enforcement**: Rejects loopback (`127.0.0.0/8`, `::1`), private RFC 1918 (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), link-local and cloud metadata (`169.254.169.254`), multicast, and carrier-grade NAT ranges.
+4. **Redirect Re-Validation**: `safeFetch` prevents redirect-based bypasses by manually inspecting and re-validating the `Location` header destination on every 3xx response.
+
+### 7.5 Outbound Webhooks & HMAC-SHA256 Signing
+- Project- and organization-scoped outbound webhooks allow customer systems to react to platform lifecycle events.
+- Every HTTP POST payload is cryptographically signed using HMAC-SHA256:
+  - Header `X-AIQA-Signature: sha256=<hex>`
+  - Header `X-AIQA-Timestamp: <iso timestamp>`
+  - Header `X-AIQA-Event-ID: <uuid>`
+- Prevents replay attacks and verifies payload integrity.
+- Failed webhook requests are recorded in `WebhookDelivery` and can be manually or programmatically retried. Retries exceeding 5 attempts transition to a `DEAD_LETTER` state.
+

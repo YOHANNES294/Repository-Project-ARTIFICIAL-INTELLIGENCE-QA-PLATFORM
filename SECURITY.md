@@ -150,3 +150,36 @@
   - Automated report generation and notification dispatches are logged in `ReportDelivery` with recipient tracking and delivery status audits.
 - **Rate-Limiting & Query Performance Protection**:
   - Date ranges for on-demand aggregation queries are bounded and validated with Zod schemas to prevent computational exhaustion or Denial of Service (DoS) attacks on the database.
+
+---
+
+## 12. Milestone 10 — Notifications, SSRF Defense & Webhook Security
+
+### 12.1 Server-Side Request Forgery (SSRF) Defense
+Outbound HTTP dispatches (team integrations, webhooks, connectivity test pings) implement strict network defenses via `validateUrlForSSRF` and `safeFetch`:
+- **Protocol Whitelisting**: Strictly restricts protocols to `http:` and `https:`. File, FTP, Gopher, and custom schemas are immediately rejected.
+- **Embedded Credential Rejection**: URLs containing embedded basic auth (`http://user:pass@host`) are rejected to prevent credential leakage.
+- **DNS Pre-Resolution Verification**: The system resolves all hostnames to their underlying IP addresses prior to initiating any socket connection.
+- **Forbidden Network Subnets**:
+  - Loopback: `127.0.0.0/8`, `::1`, `localhost`
+  - RFC 1918 Private Ranges: `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`
+  - Link-Local & Cloud Metadata: `169.254.0.0/16`, `169.254.169.254` (AWS, GCP, Azure metadata services)
+  - Carrier-Grade NAT: `100.64.0.0/10`
+  - Multicast & Reserved: `224.0.0.0/4`, `240.0.0.0/4`, `ff00::/8`
+  - IPv6 Unique Local: `fc00::/7`
+- **Redirect Re-Validation**: Fetch operations use manual redirect handling (`redirect: manual`). The destination `Location` URL is re-evaluated against all SSRF rules before each redirect hop, preventing attackers from bypassing DNS checks via open redirectors.
+
+### 12.2 Outbound Webhook Cryptographic Signing & Replay Protection
+- **HMAC-SHA256 Signing**: Every outbound webhook body is signed with the webhook's cryptographically random secret (`whsec_...`). The hex signature is transmitted in the `X-AIQA-Signature: sha256=<hex>` header.
+- **Replay Protection**: Outbound dispatches transmit `X-AIQA-Timestamp` and `X-AIQA-Event-ID` (UUIDv4). Consumers can verify that payloads were created recently and reject duplicate message deliveries.
+- **Secret Masking & Rotation**: Webhook secrets are masked in all API responses and UI displays (`whsec_...abcd`). Administrators can rotate secrets at any time via `POST /rotate-secret`, which atomically invalidates the old secret and generates a new cryptographically secure key.
+- **Bounded Retries & Dead-Letter States**: Failed deliveries are retried up to 5 times with exponential backoff before being transitioned to `DEAD_LETTER`, preventing infinite retry loops on dead consumer servers.
+
+### 12.3 HTML Injection & XSS Defense in Email Templates
+- User-supplied text fields (defect titles, descriptions, reporter names, project titles) are passed through `escapeHtml` prior to insertion into HTML email layouts.
+- Dynamic characters (`&`, `<`, `>`, `"`, `'`) are converted to their corresponding HTML entities, preventing HTML injection and client-side script execution in modern webmail clients.
+
+### 12.4 Mandatory Security Notification Override
+- User quiet hours and category opt-outs are strictly enforced for operational alerts (defects, assignments, executions).
+- However, security-critical events (password changes, account alerts, token revocations) **unconditionally bypass quiet hours and preference suppressions**, guaranteeing that users are immediately informed of potential security events.
+

@@ -13,6 +13,7 @@ import {
   Bug,
   Settings,
 } from 'lucide-react';
+import { NotificationBell } from './notification-bell';
 
 export function Navigation() {
   const pathname = usePathname();
@@ -60,6 +61,7 @@ export function Navigation() {
             </div>
           </div>
           <div className="flex items-center space-x-3">
+            <NotificationBell />
             <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
               Active Organization: Default
             </span>

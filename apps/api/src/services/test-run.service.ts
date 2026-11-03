@@ -1,6 +1,7 @@
 import { prisma } from '../prisma.js';
 import { NotFoundError, ValidationError, ConflictError } from '../errors.js';
 import { createAuditLog } from './audit.service.js';
+import { NotificationService } from './notifications/index.js';
 import {
   CreateTestRunInput,
   UpdateTestRunInput,
@@ -469,6 +470,33 @@ export class TestRunService {
         toStatus: newStatus,
       },
     });
+
+    if (newStatus === TestRunStatus.COMPLETED) {
+      this.getTestRunById(projectId, runId).then((details) => {
+        NotificationService.dispatch({
+          organizationId: run.project.organizationId,
+          projectId,
+          recipientUserIds: run.assignedToId ? [run.assignedToId] : [],
+          actorId: userId,
+          title: `Test Run Completed: ${run.name}`,
+          message: `Test run finished with ${details.summary.passPercentage}% pass rate (${details.summary.passed}/${details.summary.total} passed).`,
+          type: 'TEST_RUN_COMPLETED',
+          category: 'EXECUTION',
+          priority: details.summary.failed > 0 ? 'HIGH' : 'NORMAL',
+          entityType: 'TEST_RUN',
+          entityId: runId,
+          link: `/projects/${projectId}/runs/${runId}`,
+          metadata: {
+            runName: run.name,
+            totalTests: details.summary.total,
+            passedCount: details.summary.passed,
+            failedCount: details.summary.failed,
+            passRate: details.summary.passPercentage,
+            projectName: details.key,
+          },
+        }).catch(() => {});
+      }).catch(() => {});
+    }
 
     return this.getTestRunById(projectId, updated.id);
   }

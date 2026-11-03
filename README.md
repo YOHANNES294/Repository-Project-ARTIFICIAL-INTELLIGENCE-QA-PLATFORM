@@ -147,3 +147,16 @@ The platform features an advanced analytics and reporting suite operating direct
 - **Release Governance & Quality Gates**: Configurable rule-by-rule gates (`minPassRate`, `maxCriticalDefects`, `maxHighDefects`, `minCoverage`, `zeroBlockers`) with automated release verdicts (`READY_FOR_RELEASE`, `WARNING_NEEDS_REVIEW`, `BLOCKED_DO_NOT_RELEASE`).
 - **Custom Reports & Snapshots**: Build custom report templates, freeze immutable historical snapshots for compliance sign-offs, and configure automated recurring schedules (`DAILY`, `WEEKLY`, `MONTHLY`).
 - **Multi-Format Export Engine**: Download reports in sanitized CSV, multi-worksheet Excel (XLSX), or executive scorecard PDF, fortified with OWASP Formula Injection Defense (CWE-1236).
+
+---
+
+## 7. Notifications & External Integrations (Milestone 10)
+
+The platform provides a centralized, event-driven notification engine and external integration framework:
+- **In-App Notification Center & Real-Time SSE**: Real-time push updates via Server-Sent Events (`/api/v1/notifications/stream`) paired with polling fallback. Features an interactive top-bar notification bell, unread counter badges, and full `/notifications` center with category filtering, search, and entity deep links.
+- **Notification Preferences & Quiet Hours**: Granular user controls (`/settings/notifications`) for channel toggles (In-App, Email), category subscriptions, scheduled executive digests (Daily, Weekly), and timezone-aware quiet hours (`HH:MM`). Mandatory security notifications bypass quiet hours and custom suppressions.
+- **Provider-Independent Email Delivery**: Pluggable email adapters (`LocalMockEmailProvider`, `ResendEmailProvider`, `SmtpEmailProvider`) paired with responsive, HTML-escaped templates that eradicate client-side XSS injection.
+- **Chat & Team Integrations**: Seamless connectors for Slack (Block Kit formatted with priority-styled actions) and Microsoft Teams (Adaptive Cards), complete with live connectivity testing (`POST /test`).
+- **Enterprise Outbound Webhooks**: HMAC-SHA256 signature signing (`X-AIQA-Signature`), timestamp, and delivery UUID headers for replay protection. Features one-click secret rotation, telemetry delivery history logs, and bounded exponential retry dead-letter queuing.
+- **SSRF Network Defense**: Pre-flight validation and DNS resolution blocking loopback (`127.0.0.0/8`, `::1`), private RFC 1918 subnets, link-local, cloud metadata (`169.254.169.254`), multicast, and carrier-grade NAT. Enforces destination re-validation on all redirect hops.
+

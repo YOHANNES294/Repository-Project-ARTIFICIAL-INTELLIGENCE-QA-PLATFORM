@@ -12,6 +12,8 @@ import { getAccessTokenCookieOptions } from '../utils/security.js';
 import { OrganizationRole, ApiResponse, UpdateAIProviderConfigInput } from '@ai-qa/shared-types';
 import { updateAIProviderConfigSchema } from '@ai-qa/validation';
 import { AIGatewayService } from '../services/ai/ai-gateway.service.js';
+import { integrationRouter } from './integration.routes.js';
+import { webhookRouter } from './webhook.routes.js';
 
 export const organizationRouter: Router = Router();
 
@@ -315,4 +317,10 @@ organizationRouter.get(
     }
   }
 );
+
+// Mount Milestone 10 subrouters scoped to organization
+organizationRouter.use('/:orgId/integrations', integrationRouter);
+organizationRouter.use('/:orgId/webhooks', webhookRouter);
+
+
 

@@ -137,10 +137,14 @@ Status Legend:
 ---
 
 ## Milestone 10 — Notifications and Integrations
-- [ ] In-app notification feed & user notification preferences
-- [ ] Background worker notification delivery (Email via Nodemailer/SES, Webhooks)
-- [ ] Event dispatchers on test assignment, failure alerts, milestone reminders, defect updates
-- [ ] Webhook signature verification and idempotency protection
+- [x] In-app notification center & real-time Server-Sent Events (SSE) stream with polling fallback and unread counter badge
+- [x] User notification preferences & quiet hours schedule with localized timezone calculations and mandatory security override
+- [x] Resilient multi-channel delivery architecture (In-App, Email, Slack Block Kit, Microsoft Teams Adaptive Cards, Outbound Webhooks)
+- [x] Provider-independent email delivery (Local Mock, Resend, SMTP) with responsive templates and XSS HTML injection protection
+- [x] Enterprise outbound webhooks with HMAC-SHA256 signature signing, replay protection, secret rotation, and bounded retry dead-letter queue
+- [x] Comprehensive Server-Side Request Forgery (SSRF) defense: DNS pre-resolution, loopback/private/metadata blocking (`169.254.169.254`), and redirect revalidation
+- [x] Automated test suite: 100% passing across 19 test files and 175 tests in `apps/api` (zero regressions)
+- [x] Next.js 16.4.4 & React 19 web pages: Notification Center (`/notifications`), Preferences (`/settings/notifications`), Project Integrations Hub (`/projects/[projectId]/integrations`) with clean production build
 
 ---
 
