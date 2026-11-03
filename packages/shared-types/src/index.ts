@@ -154,6 +154,7 @@ export enum AIProviderType {
   OPENAI = 'OPENAI',
   ANTHROPIC = 'ANTHROPIC',
   GEMINI = 'GEMINI',
+  MOCK = 'MOCK',
   CUSTOM = 'CUSTOM',
 }
 
@@ -1044,3 +1045,342 @@ export interface LinkDefectTestInput {
   testRunId?: string | null;
 }
 
+
+
+// ----------------------------------------------------
+// MILESTONE 07: AI INTELLIGENCE ENGINE DTOS
+// ----------------------------------------------------
+
+export enum AITaskType {
+  TEST_GENERATION = 'TEST_GENERATION',
+  FAILURE_ANALYSIS = 'FAILURE_ANALYSIS',
+  DUPLICATE_DETECTION = 'DUPLICATE_DETECTION',
+  RISK_ANALYSIS = 'RISK_ANALYSIS',
+  QA_REPORT_SUMMARY = 'QA_REPORT_SUMMARY',
+}
+
+export enum AIGenerationStatus {
+  PENDING = 'PENDING',
+  PROCESSING = 'PROCESSING',
+  COMPLETED = 'COMPLETED',
+  FAILED = 'FAILED',
+}
+
+export enum AIReviewStatus {
+  PROPOSED = 'PROPOSED',
+  ACCEPTED = 'ACCEPTED',
+  MODIFIED = 'MODIFIED',
+  REJECTED = 'REJECTED',
+}
+
+export enum AIFeedbackRating {
+  HELPFUL = 'HELPFUL',
+  NOT_HELPFUL = 'NOT_HELPFUL',
+  INACCURATE = 'INACCURATE',
+  INCOMPLETE = 'INCOMPLETE',
+}
+
+export interface AIProviderConfigDto {
+  id: string;
+  organizationId: string;
+  provider: AIProviderType;
+  modelName: string;
+  apiEndpoint: string | null;
+  isActive: boolean;
+  hasKey: boolean;
+  maskedKey?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpdateAIProviderConfigInput {
+  provider: AIProviderType;
+  apiKey?: string;
+  modelName?: string;
+  apiEndpoint?: string | null;
+  isActive?: boolean;
+}
+
+export interface AIPromptTemplateDto {
+  id: string;
+  name: string;
+  description: string | null;
+  taskType: AITaskType;
+  systemPrompt: string;
+  userPromptTemplate: string;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AIGeneratedTestCaseProposal {
+  title: string;
+  description: string;
+  preconditions?: string | null;
+  steps: Array<{
+    stepNumber: number;
+    action: string;
+    expectedResult: string;
+    testData?: string | null;
+  }>;
+  priority: TestPriority | string;
+  type: TestType | string;
+  scenarioType: 'POSITIVE' | 'NEGATIVE' | 'BOUNDARY' | 'EDGE' | 'SECURITY' | 'ACCESSIBILITY';
+  requirementReference?: string | null;
+}
+
+export interface AIGenerationItemDto {
+  id: string;
+  generationId: string;
+  itemType: string;
+  title: string;
+  content: AIGeneratedTestCaseProposal | Record<string, any>;
+  reviewStatus: AIReviewStatus;
+  isApproved: boolean;
+  isRejected: boolean;
+  reviewedById: string | null;
+  reviewedAt: string | null;
+  persistedTestCaseId: string | null;
+  rejectionReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+  reviewedBy?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+  persistedTestCase?: {
+    id: string;
+    caseNumber: number;
+    key?: string;
+    title: string;
+  } | null;
+}
+
+export interface AIAnalysisResultDto {
+  id: string;
+  generationId: string | null;
+  targetType: string;
+  targetId: string;
+  summary: string;
+  rootCause: string | null;
+  hypotheses: Array<{ cause: string; confidence: number; explanation: string }> | null;
+  observedFacts: string[] | null;
+  confidence: number | null;
+  recommendations: string[];
+  suggestedSeverity: DefectSeverity | null;
+  suggestedPriority: DefectPriority | null;
+  createdAt: string;
+}
+
+export interface AIFeedbackDto {
+  id: string;
+  generationId: string;
+  userId: string;
+  rating: number;
+  ratingCategory?: AIFeedbackRating | null;
+  comments: string | null;
+  createdAt: string;
+  user?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  };
+}
+
+export interface AIEvaluationDto {
+  id: string;
+  generationId: string;
+  schemaValid: boolean;
+  requirementCoverage: number | null;
+  hallucinationFlag: boolean;
+  acceptanceRate: number | null;
+  createdAt: string;
+}
+
+export interface AIGenerationDto {
+  id: string;
+  projectId: string;
+  userId: string;
+  organizationId: string;
+  taskType: AITaskType;
+  provider: AIProviderType;
+  modelName: string;
+  promptTemplateId: string | null;
+  promptVersion: number | null;
+  promptInput: string;
+  rawOutput: string | null;
+  structuredOutput: Record<string, any> | null;
+  status: AIGenerationStatus;
+  errorMessage: string | null;
+  tokenPrompt: number;
+  tokenCompletion: number;
+  tokenCount: number;
+  estimatedCost: number;
+  latencyMs: number;
+  createdAt: string;
+  updatedAt: string;
+  items?: AIGenerationItemDto[];
+  analysisResults?: AIAnalysisResultDto[];
+  feedback?: AIFeedbackDto[];
+  evaluations?: AIEvaluationDto[];
+  user?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  };
+}
+
+export interface AIUsageLogDto {
+  id: string;
+  organizationId: string;
+  projectId: string | null;
+  userId: string | null;
+  feature: string;
+  provider: AIProviderType;
+  modelName: string;
+  tokensUsed: number;
+  tokensPrompt: number;
+  tokensCompletion: number;
+  estimatedCost: number;
+  durationMs: number;
+  success: boolean;
+  createdAt: string;
+  user?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+}
+
+export interface GenerateTestCasesInput {
+  requirementText: string;
+  suiteId?: string | null;
+  targetCount?: number;
+  includeEdgeCases?: boolean;
+  includeSecurity?: boolean;
+}
+
+export interface AnalyzeFailureInput {
+  testResultId: string;
+  additionalLogs?: string | null;
+}
+
+export interface AnalyzeDuplicateDefectInput {
+  title: string;
+  description: string;
+  component?: string | null;
+  environmentId?: string | null;
+}
+
+export interface AnalyzeRiskInput {
+  milestoneId?: string | null;
+  environmentId?: string | null;
+}
+
+export interface GenerateQAReportInput {
+  milestoneId?: string | null;
+  testPlanId?: string | null;
+  timeframeDays?: number;
+}
+
+export interface ReviewAIGenerationItemInput {
+  reviewStatus: AIReviewStatus;
+  modifiedContent?: AIGeneratedTestCaseProposal;
+  suiteId?: string | null;
+  rejectionReason?: string | null;
+}
+
+export interface BatchReviewAIGenerationItemsInput {
+  generationId: string;
+  itemIds: string[];
+  action: 'ACCEPT' | 'REJECT';
+  targetSuiteId?: string | null;
+}
+
+export interface SubmitAIFeedbackInput {
+  rating: number;
+  ratingCategory?: AIFeedbackRating | null;
+  comments?: string | null;
+}
+
+export interface AIRiskAnalysisDto {
+  overallRiskScore: number;
+  riskCategory: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  summary: string;
+  contributingFactors: Array<{ factor: string; impact: string; weight: number }>;
+  recommendedTestFocus: Array<{
+    area: string;
+    suggestedAction: string;
+    testCasesCount: number;
+    priority: string;
+  }>;
+  vulnerableComponents: Array<{
+    name: string;
+    failureRate: number;
+    openDefects: number;
+    riskScore: number;
+  }>;
+  dataSources: {
+    totalTestCasesAnalyzed: number;
+    failedExecutionsAnalyzed: number;
+    openDefectsAnalyzed: number;
+    codeIntegrationAvailable: boolean;
+  };
+}
+
+export interface AIQAReportDto {
+  headline: string;
+  executiveSummary: string;
+  releaseReadiness: {
+    status: 'READY' | 'CONDITIONAL' | 'BLOCKED';
+    score: number;
+    recommendation: string;
+  };
+  metricsSummary: {
+    totalTestCases: number;
+    totalExecutions: number;
+    passRatePercent: number;
+    completionRatePercent: number;
+    openDefects: number;
+    criticalDefects: number;
+    reopenRatePercent: number;
+  };
+  keyFindings: string[];
+  blockerIssues: Array<{ key: string; title: string; severity: string }>;
+  testingGaps: string[];
+  suggestedActions: string[];
+  generatedAt: string;
+}
+
+export interface AIFailureAnalysisDto {
+  summary: string;
+  observedFacts: string[];
+  hypotheses: Array<{
+    title: string;
+    probability: 'HIGH' | 'MEDIUM' | 'LOW';
+    confidence: number;
+    explanation: string;
+  }>;
+  suggestedDebuggingSteps: string[];
+  affectedComponents: string[];
+  suggestedSeverity: DefectSeverity;
+  suggestedPriority: DefectPriority;
+  relatedDefectCandidates?: Array<{ key: string; title: string; similarity: number }>;
+}
+
+export interface AIDuplicateAnalysisDto {
+  candidateDefectId: string;
+  candidateKey: string;
+  candidateTitle: string;
+  similarityScore: number;
+  confidenceLevel: 'VERY_HIGH' | 'HIGH' | 'MODERATE' | 'LOW';
+  matchReasons: string[];
+  errorSignatureMatch: boolean;
+  componentMatch: boolean;
+  suggestedAction: 'MARK_DUPLICATE' | 'LINK_RELATED' | 'KEEP_SEPARATE';
+}

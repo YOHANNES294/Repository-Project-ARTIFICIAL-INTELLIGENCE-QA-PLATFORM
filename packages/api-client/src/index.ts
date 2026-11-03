@@ -55,6 +55,24 @@ import {
   AssignDefectInput,
   CreateDefectCommentInput,
   LinkDefectTestInput,
+  AIProviderConfigDto,
+  UpdateAIProviderConfigInput,
+  AIGenerationDto,
+  AIGenerationItemDto,
+  AIFailureAnalysisDto,
+  AIDuplicateAnalysisDto,
+  AIRiskAnalysisDto,
+  AIQAReportDto,
+  AIFeedbackDto,
+  GenerateTestCasesInput,
+  AnalyzeFailureInput,
+  AnalyzeDuplicateDefectInput,
+  AnalyzeRiskInput,
+  GenerateQAReportInput,
+  ReviewAIGenerationItemInput,
+  BatchReviewAIGenerationItemsInput,
+  SubmitAIFeedbackInput,
+  AITaskType,
 } from '@ai-qa/shared-types';
 
 export interface ProjectListParams {
@@ -1020,6 +1038,156 @@ export class ApiClient {
     const queryString = query.toString() ? `?${query.toString()}` : '';
     return this.request<DefectAnalyticsDto>(
       `/projects/${projectId}/defects/analytics${queryString}`
+    );
+  }
+
+  // ----------------------------------------------------
+  // MILESTONE 07: AI INTELLIGENCE ENGINE ENDPOINTS
+  // ----------------------------------------------------
+
+  async getAIProviderConfig(projectId: string): Promise<AIProviderConfigDto> {
+    return this.request<AIProviderConfigDto>(`/projects/${projectId}/ai/provider`);
+  }
+
+  async updateAIProviderConfig(
+    projectId: string,
+    payload: UpdateAIProviderConfigInput
+  ): Promise<AIProviderConfigDto> {
+    return this.request<AIProviderConfigDto>(`/projects/${projectId}/ai/provider`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async testAIProviderConnection(
+    projectId: string
+  ): Promise<{ success: boolean; latencyMs: number; message?: string }> {
+    return this.request<{ success: boolean; latencyMs: number; message?: string }>(
+      `/projects/${projectId}/ai/provider/test`,
+      {
+        method: 'POST',
+      }
+    );
+  }
+
+  async getAIUsageMetrics(projectId: string): Promise<any> {
+    return this.request<any>(`/projects/${projectId}/ai/usage`);
+  }
+
+  async generateTestCases(
+    projectId: string,
+    payload: GenerateTestCasesInput
+  ): Promise<AIGenerationDto> {
+    return this.request<AIGenerationDto>(`/projects/${projectId}/ai/generate-tests`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async listAIGenerations(
+    projectId: string,
+    taskType?: AITaskType
+  ): Promise<AIGenerationDto[]> {
+    const query = taskType ? `?taskType=${taskType}` : '';
+    return this.request<AIGenerationDto[]>(`/projects/${projectId}/ai/generations${query}`);
+  }
+
+  async getAIGeneration(
+    projectId: string,
+    generationId: string
+  ): Promise<AIGenerationDto> {
+    return this.request<AIGenerationDto>(`/projects/${projectId}/ai/generations/${generationId}`);
+  }
+
+  async reviewAIGenerationItem(
+    projectId: string,
+    generationId: string,
+    itemId: string,
+    payload: ReviewAIGenerationItemInput
+  ): Promise<AIGenerationItemDto> {
+    return this.request<AIGenerationItemDto>(
+      `/projects/${projectId}/ai/generations/${generationId}/items/${itemId}/review`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }
+    );
+  }
+
+  async batchReviewAIGenerationItems(
+    projectId: string,
+    generationId: string,
+    payload: BatchReviewAIGenerationItemsInput
+  ): Promise<{ reviewedCount: number; results: AIGenerationItemDto[] }> {
+    return this.request<{ reviewedCount: number; results: AIGenerationItemDto[] }>(
+      `/projects/${projectId}/ai/generations/${generationId}/batch-review`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }
+    );
+  }
+
+  async analyzeTestFailure(
+    projectId: string,
+    payload: AnalyzeFailureInput
+  ): Promise<AIFailureAnalysisDto> {
+    return this.request<AIFailureAnalysisDto>(`/projects/${projectId}/ai/analyze-failure`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async analyzeDuplicateDefect(
+    projectId: string,
+    payload: AnalyzeDuplicateDefectInput
+  ): Promise<AIDuplicateAnalysisDto> {
+    return this.request<AIDuplicateAnalysisDto>(`/projects/${projectId}/ai/duplicate-intelligence`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async analyzeRisk(
+    projectId: string,
+    payload: AnalyzeRiskInput
+  ): Promise<AIRiskAnalysisDto> {
+    return this.request<AIRiskAnalysisDto>(`/projects/${projectId}/ai/risk-analysis`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async generateQAReport(
+    projectId: string,
+    payload: GenerateQAReportInput
+  ): Promise<AIQAReportDto> {
+    return this.request<AIQAReportDto>(`/projects/${projectId}/ai/qa-report`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async submitAIFeedback(
+    projectId: string,
+    generationId: string,
+    payload: SubmitAIFeedbackInput
+  ): Promise<AIFeedbackDto> {
+    return this.request<AIFeedbackDto>(
+      `/projects/${projectId}/ai/generations/${generationId}/feedback`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }
+    );
+  }
+
+  async getAIFeedback(
+    projectId: string,
+    generationId: string
+  ): Promise<AIFeedbackDto[]> {
+    return this.request<AIFeedbackDto[]>(
+      `/projects/${projectId}/ai/generations/${generationId}/feedback`
     );
   }
 }

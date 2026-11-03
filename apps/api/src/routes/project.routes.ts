@@ -20,6 +20,7 @@ import { executionRouter } from './execution.routes.js';
 import { attachmentRouter } from './attachment.routes.js';
 import { analyticsRouter } from './analytics.routes.js';
 import { defectRouter } from './defect.routes.js';
+import { aiRouter } from './ai.routes.js';
 
 export const projectRouter: Router = Router();
 
@@ -500,6 +501,9 @@ projectRouter.use('/:projectId', analyticsRouter);
 
 // Mount Milestone 06 subrouters scoped to project
 projectRouter.use('/:projectId/defects', defectRouter);
+
+// Mount Milestone 07 subrouters scoped to project
+projectRouter.use('/:projectId/ai', aiRouter);
 
 
 

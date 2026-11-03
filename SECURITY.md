@@ -82,3 +82,27 @@
   - Linking a defect to a test execution or test case from a different project or organization is strictly denied with HTTP 400.
 - **Field-Level Audit Trail**:
   - Every update, state transition, and assignment change is logged to `DefectHistory` with the actor's user ID, field name, previous value, new value, and reason, ensuring comprehensive traceability and tamper-evident compliance.
+
+---
+
+## 9. Milestone 07 — AI Intelligence Engine Security
+
+- **Credential Encryption at Rest (AES-256-GCM)**:
+  - Third-party AI provider API keys (OpenAI, Anthropic, Google Gemini) are never stored in plaintext.
+  - Keys are encrypted using AES-256-GCM with a randomized 12-byte initialization vector (`apiKeyIv`) and a 16-byte authentication tag (`apiKeyTag`) stored in separate columns.
+  - When returning provider configuration over the API, keys are never decrypted or transmitted; instead, a masked hint (e.g. `sk-a...bcde`) is returned via `maskApiKey()`.
+  - Logging interceptors and Winston formatters redact any credential strings matching secret patterns.
+- **Prompt Injection Defense & Token Sanitization**:
+  - All prompt inputs are processed by `PromptSanitizer.sanitize()` prior to adapter transmission.
+  - Redaction rules detect and replace authorization bearer tokens, JWT signatures, RSA/EC private keys, passwords, and API key patterns with `<REDACTED>` placeholders.
+  - Known prompt injection phrases (`ignore previous instructions`, `system prompt override`, `you are now DAN`, markdown delimiter jailbreaks) are neutralized.
+- **Strict Multi-Tenant & RBAC Isolation**:
+  - AI provider configurations, usage metrics, prompt templates, and generation histories are strictly scoped to the verified tenant (`organizationId` and `projectId`).
+  - Cross-tenant queries are blocked at both route middleware and service layer query constraints.
+  - Only users with `OWNER` or `ADMINISTRATOR` roles are authorized to configure organization AI provider credentials.
+- **Human-in-the-Loop Agency & State Protection**:
+  - AI generation outputs are untrusted inputs. Proposed test cases remain in `PROPOSED` review state until a human QA engineer explicitly accepts or edits them.
+  - The system prevents AI from directly mutating canonical `TestCase` or `TestCaseVersion` records.
+- **Cost & Quota Governance**:
+  - Every LLM invocation logs prompt tokens, completion tokens, latency, and estimated cost in `AIUsageLog`.
+  - Configurable rate limits (`rateLimitPerMinute`, `rateLimitPerDay`) enforce hard caps to prevent runaway consumption or denial-of-wallet attacks.

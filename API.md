@@ -327,3 +327,28 @@ Base route: `/api/v1/projects/:projectId`
   - Distribution by status, severity, priority, developer, component, and milestone.
   - Aging buckets: `< 7 days`, `7 - 30 days`, `> 30 days`.
   - Empty dataset safety: returns 0 and empty collections with zero divide-by-zero errors.
+
+---
+
+## 9. Milestone 07 — AI Intelligence Engine APIs
+
+### 9.1 Organization Provider Configuration & Telemetry (`/api/v1/organizations/:orgId/ai`)
+
+- `GET /provider`: Get the organization's active AI provider configuration (`provider`, `model`, `maxTokens`, `temperature`, `hasKey`, `maskedApiKey`, `isEnabled`, `rateLimitPerMinute`, `rateLimitPerDay`). API keys are never exposed in plaintext.
+- `PUT /provider`: Update the organization's AI provider (`MOCK`, `OPENAI`, `ANTHROPIC`, `GEMINI`). Encrypts credentials with AES-256-GCM (`apiKeyEncrypted`, `apiKeyIv`, `apiKeyTag`).
+- `POST /provider/test`: Test connection and verification ping to the active AI provider adapter.
+- `GET /usage`: Retrieve token usage metrics, total estimated cost (USD), generation counts, and detailed query logs for the organization.
+
+### 9.2 Project AI Operations (`/api/v1/projects/:projectId/ai`)
+
+- `POST /generate-tests`: Generate structured test cases (Positive, Negative, Boundary, Security) from requirements or user stories. Proposes candidates with `PROPOSED` review status requiring human approval before official commitment.
+- `GET /generations`: List AI generation history for the project with task type and item counts.
+- `GET /generations/:generationId`: Retrieve details of an AI generation session and proposed items.
+- `POST /generations/:generationId/items/:itemId/review`: Human review for a proposed test case (`ACCEPTED`, `REJECTED`, `EDITED`). When accepted, atomically creates an official `TestCase` record with immutable `v1` version and traceability to the generation item.
+- `POST /generations/:generationId/batch-review`: Batch accept or reject multiple proposed items in a single atomic transaction.
+- `POST /failure-analysis`: Root-cause failure analysis for failed test runs and defect logs. Strictly separates observed facts from diagnostic hypotheses, identifies affected components, confidence level, and actionable debug recommendations.
+- `GET /duplicate-intelligence`: Lexical and semantic duplicate detection comparing defect details with existing open defects. Categorizes recommendations as `MARK_DUPLICATE`, `LINK_RELATED`, or `KEEP_SEPARATE` with similarity scores.
+- `GET /risk-analysis`: Risk-based testing assessment grounded in real database defect densities, test execution pass/fail ratios, and module failure histories. Calculates overall quality score and prioritized testing areas.
+- `GET /qa-report`: Grounded executive QA status summary for release stakeholders. Computes real execution rates, blocker defects, release readiness indicator (`HIGH`, `MEDIUM`, `LOW`), and key quality recommendations.
+- `POST /feedback`: Record human feedback (`HELPFUL`, `NOT_HELPFUL`, `INACCURATE`, `INCOMPLETE`, comments) on AI outputs for quality tracking.
+- `GET /feedback`: Retrieve logged feedback and rating metrics for the project.

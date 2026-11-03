@@ -9,7 +9,9 @@ import {
 } from '@ai-qa/validation';
 import { authenticate, requireTenant, requireRole } from '../middleware/auth.js';
 import { getAccessTokenCookieOptions } from '../utils/security.js';
-import { OrganizationRole, ApiResponse } from '@ai-qa/shared-types';
+import { OrganizationRole, ApiResponse, UpdateAIProviderConfigInput } from '@ai-qa/shared-types';
+import { updateAIProviderConfigSchema } from '@ai-qa/validation';
+import { AIGatewayService } from '../services/ai/ai-gateway.service.js';
 
 export const organizationRouter: Router = Router();
 
@@ -232,3 +234,85 @@ organizationRouter.delete(
     }
   }
 );
+
+// --- Milestone 07 AI Provider & Telemetry Endpoints (Organization Scoped) ---
+
+// Get AI Provider Configuration
+organizationRouter.get(
+  '/:orgId/ai/provider',
+  authenticate,
+  requireTenant,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const config = await AIGatewayService.getProviderConfig(req.organizationId!);
+      const response: ApiResponse = {
+        success: true,
+        data: config,
+      };
+      res.status(200).json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// Update AI Provider Configuration (Owner / Admin / QA Manager)
+organizationRouter.put(
+  '/:orgId/ai/provider',
+  authenticate,
+  requireTenant,
+  requireRole(OrganizationRole.OWNER, OrganizationRole.ADMINISTRATOR, OrganizationRole.QA_MANAGER),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const validated = updateAIProviderConfigSchema.parse(req.body) as UpdateAIProviderConfigInput;
+      const updated = await AIGatewayService.updateProviderConfig(req.organizationId!, validated);
+      const response: ApiResponse = {
+        success: true,
+        data: updated,
+      };
+      res.status(200).json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// Test Provider Connection
+organizationRouter.post(
+  '/:orgId/ai/provider/test',
+  authenticate,
+  requireTenant,
+  requireRole(OrganizationRole.OWNER, OrganizationRole.ADMINISTRATOR, OrganizationRole.QA_MANAGER),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await AIGatewayService.testProviderConnection(req.organizationId!);
+      const response: ApiResponse = {
+        success: true,
+        data: result,
+      };
+      res.status(200).json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// Get Organization AI Usage Telemetry
+organizationRouter.get(
+  '/:orgId/ai/usage',
+  authenticate,
+  requireTenant,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const metrics = await AIGatewayService.getUsageMetrics(req.organizationId!);
+      const response: ApiResponse = {
+        success: true,
+        data: metrics,
+      };
+      res.status(200).json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+

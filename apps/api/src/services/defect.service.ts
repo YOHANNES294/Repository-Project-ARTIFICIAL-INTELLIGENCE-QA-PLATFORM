@@ -190,14 +190,6 @@ export class DefectService {
     });
     if (!project) throw new NotFoundError('Project not found');
 
-    // Auto-increment defect number sequentially per project
-    const lastDefect = await prisma.defect.findFirst({
-      where: { projectId },
-      orderBy: { defectNumber: 'desc' },
-      select: { defectNumber: true },
-    });
-    const nextDefectNumber = (lastDefect?.defectNumber || 0) + 1;
-
     // Validate test result if linking directly from execution
     let resolvedTestCaseId = input.testCaseId || null;
     let resolvedTestRunId = input.testRunId || null;
@@ -223,16 +215,29 @@ export class DefectService {
       resolvedTestRunId = result.testRunCase.testRun.id;
     }
 
-    const defect = await prisma.$transaction(async (tx: any) => {
-      // 1. Create Defect
-      const newDefect = await tx.defect.create({
-        data: {
-          projectId,
-          defectNumber: nextDefectNumber,
-          title: input.title,
-          description: input.description,
-          stepsToRepro: input.stepsToRepro || null,
-          expectedResult: input.expectedResult || null,
+    // Concurrency retry loop for sequential project-scoped defect IDs
+    let attempts = 0;
+    while (attempts < 5) {
+      attempts++;
+      try {
+        const defect = await prisma.$transaction(async (tx: any) => {
+          // Auto-increment defect number sequentially per project within transaction
+          const lastDefect = await tx.defect.findFirst({
+            where: { projectId },
+            orderBy: { defectNumber: 'desc' },
+            select: { defectNumber: true },
+          });
+          const nextDefectNumber = (lastDefect?.defectNumber || 0) + 1;
+
+          // 1. Create Defect
+          const newDefect = await tx.defect.create({
+            data: {
+              projectId,
+              defectNumber: nextDefectNumber,
+              title: input.title,
+              description: input.description,
+              stepsToRepro: input.stepsToRepro || null,
+              expectedResult: input.expectedResult || null,
           actualResult: input.actualResult || null,
           severity: input.severity || DefectSeverity.MEDIUM,
           priority: input.priority || DefectPriority.MEDIUM,
@@ -326,7 +331,15 @@ export class DefectService {
       ...defect,
       key: `${defect.project.key}-BUG-${defect.defectNumber}`,
     };
+  } catch (err: any) {
+    if (err.code === 'P2002' && attempts < 5) {
+      continue;
+    }
+    throw err;
   }
+}
+throw new Error('Failed to generate unique defect number after multiple attempts');
+}
 
   // ----------------------------------------------------
   // UPDATE DEFECT
@@ -517,25 +530,7 @@ export class DefectService {
     userId: string,
     meta?: { ipAddress?: string; userAgent?: string }
   ) {
-    const defect = await prisma.defect.findUnique({
-      where: { id: defectId },
-      include: { project: { select: { organizationId: true, key: true } } },
-    });
-
-    if (!defect || defect.projectId !== projectId) {
-      throw new NotFoundError('Defect not found');
-    }
-
-    const currentStatus = defect.status;
     const targetStatus = input.status;
-
-    // Validate allowed transition
-    const allowed = this.VALID_TRANSITIONS[currentStatus] || [];
-    if (!allowed.includes(targetStatus)) {
-      throw new ValidationError(
-        `Invalid defect status transition from ${currentStatus} to ${targetStatus}`
-      );
-    }
 
     // Sensitive transition requirements:
     // FIXED requires resolution notes
@@ -553,54 +548,74 @@ export class DefectService {
       throw new ValidationError('Reason is required when reopening a defect');
     }
 
-    // DUPLICATE requires duplicateOfId with cycle prevention
-    if (targetStatus === DefectStatus.DUPLICATE) {
-      if (!input.duplicateOfId) {
-        throw new ValidationError('Canonical defect ID is required when marking as DUPLICATE');
-      }
-      if (input.duplicateOfId === defectId) {
-        throw new ValidationError('A defect cannot be marked as a duplicate of itself');
-      }
-
-      // Check target exists and belongs to same project
-      const canonical = await prisma.defect.findUnique({
-        where: { id: input.duplicateOfId },
-        select: { id: true, projectId: true, duplicateOfId: true },
-      });
-      if (!canonical || canonical.projectId !== projectId) {
-        throw new ValidationError('Canonical defect not found in this project');
-      }
-
-      // Cycle Prevention: traverse duplicateOfId chain
-      let currCanonicalId: string | null = canonical.duplicateOfId;
-      const visited = new Set<string>([defectId, canonical.id]);
-      while (currCanonicalId) {
-        if (visited.has(currCanonicalId)) {
-          throw new ValidationError('Circular duplicate relationship detected');
-        }
-        visited.add(currCanonicalId);
-        const next = await prisma.defect.findUnique({
-          where: { id: currCanonicalId },
-          select: { duplicateOfId: true },
-        });
-        currCanonicalId = next?.duplicateOfId || null;
-      }
-    }
-
-    // Prepare date updates
-    let resolvedAt = defect.resolvedAt;
-    let closedAt = defect.closedAt;
-
-    if (targetStatus === DefectStatus.FIXED) {
-      resolvedAt = new Date();
-    } else if (targetStatus === DefectStatus.CLOSED) {
-      closedAt = new Date();
-    } else if (targetStatus === DefectStatus.REOPENED) {
-      resolvedAt = null;
-      closedAt = null;
-    }
-
+    // Atomic transaction for concurrency safety and cycle prevention
     const updated = await prisma.$transaction(async (tx: any) => {
+      const defect = await tx.defect.findUnique({
+        where: { id: defectId },
+        include: { project: { select: { organizationId: true, key: true } } },
+      });
+
+      if (!defect || defect.projectId !== projectId) {
+        throw new NotFoundError('Defect not found');
+      }
+
+      const currentStatus = defect.status;
+
+      // Validate allowed transition atomically against latest database state
+      const allowed = (this.VALID_TRANSITIONS as Record<string, DefectStatus[]>)[currentStatus] || [];
+      if (!allowed.includes(targetStatus)) {
+        throw new ValidationError(
+          `Invalid defect status transition from ${currentStatus} to ${targetStatus}`
+        );
+      }
+
+      // DUPLICATE requires duplicateOfId with cycle prevention
+      if (targetStatus === DefectStatus.DUPLICATE) {
+        if (!input.duplicateOfId) {
+          throw new ValidationError('Canonical defect ID is required when marking as DUPLICATE');
+        }
+        if (input.duplicateOfId === defectId) {
+          throw new ValidationError('A defect cannot be marked as a duplicate of itself');
+        }
+
+        // Check target exists and belongs to same project
+        const canonical = await tx.defect.findUnique({
+          where: { id: input.duplicateOfId },
+          select: { id: true, projectId: true, duplicateOfId: true },
+        });
+        if (!canonical || canonical.projectId !== projectId) {
+          throw new ValidationError('Canonical defect not found in this project');
+        }
+
+        // Cycle Prevention: traverse duplicateOfId chain
+        let currCanonicalId: string | null = canonical.duplicateOfId;
+        const visited = new Set<string>([defectId, canonical.id]);
+        while (currCanonicalId) {
+          if (visited.has(currCanonicalId)) {
+            throw new ValidationError('Circular duplicate relationship detected');
+          }
+          visited.add(currCanonicalId);
+          const next = await tx.defect.findUnique({
+            where: { id: currCanonicalId },
+            select: { duplicateOfId: true },
+          });
+          currCanonicalId = next?.duplicateOfId || null;
+        }
+      }
+
+      // Prepare date updates
+      let resolvedAt = defect.resolvedAt;
+      let closedAt = defect.closedAt;
+
+      if (targetStatus === DefectStatus.FIXED) {
+        resolvedAt = new Date();
+      } else if (targetStatus === DefectStatus.CLOSED) {
+        closedAt = new Date();
+      } else if (targetStatus === DefectStatus.REOPENED) {
+        resolvedAt = null;
+        closedAt = null;
+      }
+
       const res = await tx.defect.update({
         where: { id: defectId },
         data: {

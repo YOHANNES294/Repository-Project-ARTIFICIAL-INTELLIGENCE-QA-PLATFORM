@@ -426,6 +426,22 @@ export default function ProjectDetailPage() {
                     Lifecycle states, duplicate checks & test links
                   </p>
                 </Link>
+
+                <Link
+                  href={`/projects/${projectId}/ai`}
+                  className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:border-indigo-500 hover:shadow-md transition-all group"
+                >
+                  <div className="p-2.5 rounded-lg bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 w-fit mb-3 group-hover:scale-105 transition-transform">
+                    <Sparkles className="h-5 w-5" />
+                  </div>
+                  <h4 className="font-bold text-slate-900 dark:text-white text-sm flex items-center justify-between">
+                    AI Intelligence Engine
+                    <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-indigo-600 transition-colors" />
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Test generation, failure diagnostics, duplicate detection, risk & executive QA reports
+                  </p>
+                </Link>
               </div>
 
               {/* Environments Quick View */}

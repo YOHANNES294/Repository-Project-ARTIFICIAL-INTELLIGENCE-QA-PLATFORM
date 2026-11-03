@@ -150,7 +150,37 @@ enum AIProviderType {
   OPENAI
   ANTHROPIC
   GEMINI
+  MOCK
   CUSTOM
+}
+
+enum AITaskType {
+  TEST_GENERATION
+  FAILURE_ANALYSIS
+  DUPLICATE_DETECTION
+  RISK_ANALYSIS
+  QA_REPORT_SUMMARY
+}
+
+enum AIGenerationStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum AIReviewStatus {
+  PROPOSED
+  ACCEPTED
+  MODIFIED
+  REJECTED
+}
+
+enum AIFeedbackRating {
+  HELPFUL
+  NOT_HELPFUL
+  INACCURATE
+  INCOMPLETE
 }
 
 // ----------------------------------------------------
@@ -189,6 +219,8 @@ model User {
   auditLogs            AuditLog[]
   aiGenerations        AIGeneration[]
   aiFeedback           AIFeedback[]
+  reviewedAIItems      AIGenerationItem[]   @relation("ReviewedAIItems")
+  aiUsageLogs          AIUsageLog[]
   refreshTokens        RefreshToken[]
 
   @@index([email])
@@ -209,6 +241,7 @@ model Organization {
   projects          Project[]
   auditLogs         AuditLog[]
   aiProviderConfigs AIProviderConfig[]
+  aiGenerations     AIGeneration[]
   aiUsageLogs       AIUsageLog[]
   apiKeys           APIKey[]
   webhooks          Webhook[]
@@ -376,6 +409,8 @@ model Project {
   defects        Defect[]
   attachments    Attachment[]
   integrations   Integration[]
+  aiGenerations  AIGeneration[]
+  aiUsageLogs    AIUsageLog[]
   reportDefs     ReportDefinition[]
   reportSnapshots ReportSnapshot[]
 
@@ -515,6 +550,7 @@ model TestCase {
   versions         TestCaseVersion[]
   planCases        TestPlanCase[]
   defectLinks      DefectTestLink[]
+  generatedFromAIItems AIGenerationItem[]
 
   @@unique([projectId, caseNumber])
   @@index([projectId])
@@ -908,89 +944,174 @@ model AuditLog {
 }
 
 // ----------------------------------------------------
-// ARTIFICIAL INTELLIGENCE MODELS
+// ARTIFICIAL INTELLIGENCE MODELS (Milestone 07)
 // ----------------------------------------------------
 model AIProviderConfig {
-  id             String         @id @default(uuid())
-  organizationId String
-  provider       AIProviderType
+  id              String         @id @default(uuid())
+  organizationId  String
+  provider        AIProviderType
   apiKeyEncrypted String?
-  modelName      String         @default("gpt-4o")
-  isActive       Boolean        @default(true)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  apiKeyIv        String?
+  apiKeyTag       String?
+  modelName       String         @default("gpt-4o")
+  apiEndpoint     String?
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
-  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, provider])
+  @@index([organizationId])
+}
+
+model AIPromptTemplate {
+  id                 String         @id @default(uuid())
+  name               String
+  description        String?
+  taskType           AITaskType
+  systemPrompt       String
+  userPromptTemplate String
+  version            Int            @default(1)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  generations        AIGeneration[]
+
+  @@unique([taskType, version])
 }
 
 model AIGeneration {
-  id             String             @id @default(uuid())
-  userId         String
-  organizationId String
-  type           String             // "TEST_CASES", "FAILURE_ANALYSIS", "RISK_REPORT"
-  promptInput    String
-  rawOutput      String
-  tokenCount     Int                @default(0)
-  createdAt      DateTime           @default(now())
+  id                 String             @id @default(uuid())
+  projectId          String
+  userId             String
+  organizationId     String
+  taskType           AITaskType
+  provider           AIProviderType     @default(MOCK)
+  modelName          String             @default("mock")
+  promptTemplateId   String?
+  promptVersion      Int?
+  promptInput        String
+  rawOutput          String?
+  structuredOutput   Json?
+  status             AIGenerationStatus @default(COMPLETED)
+  errorMessage       String?
+  tokenPrompt        Int                @default(0)
+  tokenCompletion    Int                @default(0)
+  tokenCount         Int                @default(0)
+  estimatedCost      Float              @default(0.0)
+  latencyMs          Int                @default(0)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 
-  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items          AIGenerationItem[]
-  feedback       AIFeedback[]
+  project            Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization       Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  promptTemplate     AIPromptTemplate?  @relation(fields: [promptTemplateId], references: [id], onDelete: SetNull)
+  items              AIGenerationItem[]
+  analysisResults    AIAnalysisResult[]
+  feedback           AIFeedback[]
+  evaluations        AIEvaluation[]
 
+  @@index([projectId, taskType])
   @@index([organizationId])
 }
 
 model AIGenerationItem {
-  id             String       @id @default(uuid())
-  generationId   String
-  title          String
-  content        Json
-  isApproved     Boolean      @default(false)
-  isRejected     Boolean      @default(false)
+  id                  String         @id @default(uuid())
+  generationId        String
+  itemType            String         @default("TEST_CASE")
+  title               String
+  content             Json
+  reviewStatus        AIReviewStatus @default(PROPOSED)
+  isApproved          Boolean        @default(false)
+  isRejected          Boolean        @default(false)
+  reviewedById        String?
+  reviewedAt          DateTime?
+  persistedTestCaseId String?
+  rejectionReason     String?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
 
-  generation     AIGeneration @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  generation          AIGeneration   @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  reviewedBy          User?          @relation("ReviewedAIItems", fields: [reviewedById], references: [id], onDelete: SetNull)
+  persistedTestCase   TestCase?      @relation(fields: [persistedTestCaseId], references: [id], onDelete: SetNull)
 
   @@index([generationId])
+  @@index([persistedTestCaseId])
 }
 
 model AIAnalysisResult {
-  id             String   @id @default(uuid())
-  targetType     String   // "TEST_FAILURE", "DEFECT_DUPLICATE"
-  targetId       String
-  summary        String
-  rootCause      String?
-  confidence     Float?
-  recommendations String[] @default([])
-  createdAt      DateTime @default(now())
+  id                 String          @id @default(uuid())
+  generationId       String?
+  targetType         String          // "TEST_FAILURE", "DEFECT_DUPLICATE", "RISK_ANALYSIS", "QA_REPORT"
+  targetId           String
+  summary            String
+  rootCause          String?
+  hypotheses         Json?           // Potential causes with confidence scores (distinguished from facts)
+  observedFacts      Json?           // Facts extracted from test execution / logs
+  confidence         Float?
+  recommendations    String[]        @default([])
+  suggestedSeverity  DefectSeverity?
+  suggestedPriority  DefectPriority?
+  createdAt          DateTime        @default(now())
+
+  generation         AIGeneration?   @relation(fields: [generationId], references: [id], onDelete: Cascade)
 
   @@index([targetType, targetId])
+  @@index([generationId])
 }
 
 model AIUsageLog {
-  id             String       @id @default(uuid())
-  organizationId String
-  feature        String
-  tokensUsed     Int
-  estimatedCost  Float        @default(0.0)
-  createdAt      DateTime     @default(now())
+  id              String         @id @default(uuid())
+  organizationId  String
+  projectId       String?
+  userId          String?
+  feature         String
+  provider        AIProviderType @default(MOCK)
+  modelName       String         @default("mock")
+  tokensUsed      Int            @default(0)
+  tokensPrompt    Int            @default(0)
+  tokensCompletion Int           @default(0)
+  estimatedCost   Float          @default(0.0)
+  durationMs      Int            @default(0)
+  success         Boolean        @default(true)
+  createdAt       DateTime       @default(now())
 
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project         Project?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  user            User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  @@index([organizationId])
+  @@index([organizationId, createdAt])
+  @@index([projectId])
 }
 
 model AIFeedback {
-  id           String       @id @default(uuid())
-  generationId String
-  userId       String
-  rating       Int          // 1 to 5
-  comments     String?
-  createdAt    DateTime     @default(now())
+  id             String            @id @default(uuid())
+  generationId   String
+  userId         String
+  rating         Int               @default(5)
+  ratingCategory AIFeedbackRating?
+  comments       String?
+  createdAt      DateTime          @default(now())
 
-  generation   AIGeneration @relation(fields: [generationId], references: [id], onDelete: Cascade)
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  generation     AIGeneration      @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([generationId])
+  @@index([userId])
+}
+
+model AIEvaluation {
+  id                  String       @id @default(uuid())
+  generationId        String
+  schemaValid         Boolean      @default(true)
+  requirementCoverage Float?
+  hallucinationFlag   Boolean      @default(false)
+  acceptanceRate      Float?
+  createdAt           DateTime     @default(now())
+
+  generation          AIGeneration @relation(fields: [generationId], references: [id], onDelete: Cascade)
 
   @@index([generationId])
 }
@@ -1000,6 +1121,7 @@ model AIEmbedding {
   entityType String   // "TEST_CASE", "DEFECT"
   entityId   String
   embedding  Float[]
+  textSample String?
   createdAt  DateTime @default(now())
 
   @@unique([entityType, entityId])

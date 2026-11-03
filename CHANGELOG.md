@@ -2,7 +2,47 @@
 
 All notable changes to the Artificial Intelligence QA Platform will be documented here.
 
-## [0.6.0] - Milestone 06 Completion: Defect Management & Bug Tracking
+## [0.7.0] - Milestone 07 Completion: AI Intelligence Engine
+### Added
+- **Provider-Agnostic AI Gateway & Adapters**:
+  - Unified `AIProviderAdapter` interface supporting `OpenAIAdapter` (`gpt-4o-mini`), `AnthropicAdapter` (`claude-3-5-haiku`), `GeminiAdapter` (`gemini-2.0-flash`), and `MockAIAdapter` (`mock-llm-v1`).
+  - Deterministic offline mock adapter ensuring zero-cost test execution and predictable CI builds.
+  - Automatic fallback handling and graceful degradation: core QA workflows remain 100% operational when AI providers are unavailable.
+- **Enterprise Credential Encryption & Key Masking**:
+  - Provider credentials encrypted at rest using AES-256-GCM with randomized 12-byte IV and 16-byte authentication tag in dedicated columns (`apiKeyEncrypted`, `apiKeyIv`, `apiKeyTag`).
+  - Masked API key display (`sk-a...bcde`) prevents credential leakage via APIs, error logs, or browser state.
+- **Prompt Sanitization & Injection Defense**:
+  - Comprehensive `PromptSanitizer` utility detecting and redacting bearer tokens, JWT signatures, private keys, passwords, and API key patterns.
+  - Neutralizes prompt injection patterns (`ignore previous instructions`, `system prompt override`, `you are now DAN`, markdown delimiter jailbreaks).
+- **Structured Output Validation & Human-in-the-Loop Review**:
+  - Shared Zod validation schemas enforcing strict types and runtime verification on all LLM responses.
+  - Human review workflow: generated test cases are proposed (`PROPOSED`), reviewed individually (`ACCEPTED`, `REJECTED`, `EDITED`), or batch-reviewed.
+  - Accepted test cases are atomically committed into official `TestCase` and immutable `TestCaseVersion` records with full traceability.
+- **AI Domain Capabilities**:
+  - **Test Case Generation**: Produces structured positive, negative, boundary, and security test cases from user requirements.
+  - **Failure Analysis**: Root-cause diagnostics separating observed facts from hypotheses with confidence scores, affected components, and step-by-step debugging guides.
+  - **Duplicate Defect Intelligence**: Lexical and semantic similarity matching classifying candidates into `MARK_DUPLICATE`, `LINK_RELATED`, and `KEEP_SEPARATE`.
+  - **Risk-Based Testing Analysis**: Grounded in real database defect densities, failure rates, and execution history.
+  - **Executive QA Summary Report**: Stakeholder status report computed from actual project metrics and blocker defect counts.
+  - **Feedback & Telemetry**: User quality ratings (`HELPFUL`, `NOT_HELPFUL`, `INACCURATE`, `INCOMPLETE`), token usage logging, and cost estimation.
+- **Resolved M06 Verification Items**:
+  - Concurrency safety during sequential project-scoped defect creation (`createDefect` atomic retry loop on `P2002`).
+  - Internal staff note privacy isolation (`isInternal: true` comments strictly stripped for `VIEWER` users).
+  - Workspace test project count analyzed: 10 active packages with tests out of 11 workspace packages.
+- **Frontend Next.js 16 AI Workbench**:
+  - AI Hub Dashboard (`/projects/[projectId]/ai`).
+  - Test Generation Studio (`/projects/[projectId]/ai/generate-tests`) with proposal reviews and batch acceptance.
+  - Failure Analysis Workbench (`/projects/[projectId]/ai/failure-analysis`).
+  - Duplicate Defect Intelligence (`/projects/[projectId]/ai/duplicate-intelligence`).
+  - Risk Analysis Dashboard (`/projects/[projectId]/ai/risk-analysis`).
+  - Executive QA Release Report (`/projects/[projectId]/ai/qa-report`).
+  - Provider Settings & Telemetry (`/projects/[projectId]/ai/settings`).
+  - Project Overview quick navigation card to AI Intelligence Engine.
+- **Automated Verification**:
+  - 18 new automated tests in `test/ai.test.ts` covering crypto, sanitization, gateway adapters, test generation, human review, failure analysis, duplicate detection, risk analysis, executive QA report, and RBAC enforcement.
+  - Full API test suite: 16 test files passed, 99 tests passed, 0 failures.
+  - Monorepo test suite: 105 passed tests, 0 failures across all packages.
+  - Production build clean across all packages (`pnpm -r build` exit code 0).
 ### Added
 - **Defect Lifecycle & Domain Model**:
   - Extended Prisma schema with domain models `Defect`, `DefectComment`, `DefectHistory`, and `DefectTestLink`.

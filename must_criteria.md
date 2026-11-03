@@ -98,14 +98,15 @@ Status Legend:
 ---
 
 ## Milestone 07 — AI Intelligence Engine
-- [ ] Provider-agnostic AI Gateway & adapter interface (support OpenAI, Anthropic, Gemini, local/custom)
-- [ ] Structured output validation via Zod schemas
-- [ ] AI Test Case Generator from user stories / requirements
-- [ ] AI Test Failure Analyzer (root cause analysis from stack traces, logs, error messages)
-- [ ] AI Defect Assistant (duplicate detection, severity recommendation, reproduction steps refinement)
-- [ ] AI Risk Analysis & QA summary report generation
-- [ ] Token/cost tracking, rate limiting, and prompt injection sanitization
-- [ ] Graceful degradation when AI providers are unavailable
+- [x] Provider-agnostic AI Gateway & adapter interface (OpenAI, Anthropic, Gemini, deterministic offline MockLLM)
+- [x] Structured output validation via shared Zod schemas and runtime verification
+- [x] AI Test Case Generator from requirements with mandatory human-in-the-loop review and atomic TestCase conversion
+- [x] AI Test Failure Analyzer (root cause analysis strictly separating observed facts from diagnostic hypotheses)
+- [x] AI Defect Assistant (lexical and semantic duplicate detection with MARK_DUPLICATE, LINK_RELATED, KEEP_SEPARATE recommendations)
+- [x] AI Risk Analysis & Executive QA summary report grounded in real database execution and defect metrics
+- [x] Token/cost tracking, rate limiting, AES-256-GCM credential encryption, and prompt injection sanitization
+- [x] Graceful degradation and zero platform downtime when AI providers are unavailable
+- [x] Investigation & resolution of M06 verification items (concurrent defect ID generation safety, internal staff note privacy isolation)
 
 ---
 

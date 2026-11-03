@@ -593,3 +593,111 @@ export type CreateTestCaseInput = z.infer<typeof createTestCaseSchema>;
 export type UpdateTestCaseInput = z.infer<typeof updateTestCaseSchema>;
 export type CsvImportRowInput = z.infer<typeof csvImportRowSchema>;
 export type CsvBulkImportInput = z.infer<typeof csvBulkImportSchema>;
+
+
+// ----------------------------------------------------
+// MILESTONE 07: AI INTELLIGENCE SCHEMAS
+// ----------------------------------------------------
+
+export const aiProviderTypeEnum = z.enum([
+  'OPENAI',
+  'ANTHROPIC',
+  'GEMINI',
+  'MOCK',
+  'CUSTOM',
+]);
+
+export const aiTaskTypeEnum = z.enum([
+  'TEST_GENERATION',
+  'FAILURE_ANALYSIS',
+  'DUPLICATE_DETECTION',
+  'RISK_ANALYSIS',
+  'QA_REPORT_SUMMARY',
+]);
+
+export const aiReviewStatusEnum = z.enum([
+  'PROPOSED',
+  'ACCEPTED',
+  'MODIFIED',
+  'REJECTED',
+]);
+
+export const aiFeedbackRatingEnum = z.enum([
+  'HELPFUL',
+  'NOT_HELPFUL',
+  'INACCURATE',
+  'INCOMPLETE',
+]);
+
+export const updateAIProviderConfigSchema = z.object({
+  provider: aiProviderTypeEnum,
+  apiKey: z.string().min(1, 'API key cannot be empty').max(500).optional(),
+  modelName: z.string().min(1).max(100).optional(),
+  apiEndpoint: z.string().url().max(500).nullable().optional(),
+  isActive: z.boolean().optional(),
+});
+
+export const generateTestCasesSchema = z.object({
+  requirementText: z
+    .string()
+    .min(10, 'Requirement text must be at least 10 characters')
+    .max(50000, 'Requirement text exceeds maximum allowed size (50k characters)')
+    .trim(),
+  suiteId: z.string().uuid('Invalid suite ID').nullable().optional(),
+  targetCount: z.number().int().min(1).max(30).default(5),
+  includeEdgeCases: z.boolean().default(true),
+  includeSecurity: z.boolean().default(true),
+});
+
+export const analyzeFailureSchema = z.object({
+  testResultId: z.string().uuid('Invalid test result ID'),
+  additionalLogs: z.string().max(50000).nullable().optional(),
+});
+
+export const analyzeDuplicateDefectSchema = z.object({
+  title: z.string().min(3, 'Title must be at least 3 characters').max(255).trim(),
+  description: z.string().max(20000).trim().default(''),
+  component: z.string().max(100).nullable().optional(),
+  environmentId: z.string().uuid('Invalid environment ID').nullable().optional(),
+});
+
+export const analyzeRiskSchema = z.object({
+  milestoneId: z.string().uuid('Invalid milestone ID').nullable().optional(),
+  environmentId: z.string().uuid('Invalid environment ID').nullable().optional(),
+});
+
+export const generateQAReportSchema = z.object({
+  milestoneId: z.string().uuid('Invalid milestone ID').nullable().optional(),
+  testPlanId: z.string().uuid('Invalid test plan ID').nullable().optional(),
+  timeframeDays: z.number().int().min(1).max(365).default(30),
+});
+
+export const reviewAIGenerationItemSchema = z.object({
+  reviewStatus: aiReviewStatusEnum,
+  modifiedContent: z.any().optional(),
+  suiteId: z.string().uuid('Invalid suite ID').nullable().optional(),
+  rejectionReason: z.string().max(1000).nullable().optional(),
+});
+
+export const batchReviewAIGenerationItemsSchema = z.object({
+  generationId: z.string().uuid('Invalid generation ID'),
+  itemIds: z.array(z.string().uuid('Invalid item ID')).min(1, 'Select at least one item'),
+  action: z.enum(['ACCEPT', 'REJECT']),
+  targetSuiteId: z.string().uuid('Invalid suite ID').nullable().optional(),
+});
+
+export const submitAIFeedbackSchema = z.object({
+  rating: z.number().int().min(1).max(5),
+  ratingCategory: aiFeedbackRatingEnum.nullable().optional(),
+  comments: z.string().max(2000).nullable().optional(),
+});
+
+export type UpdateAIProviderConfigInput = z.infer<typeof updateAIProviderConfigSchema>;
+export type GenerateTestCasesInput = z.infer<typeof generateTestCasesSchema>;
+export type AnalyzeFailureInput = z.infer<typeof analyzeFailureSchema>;
+export type AnalyzeDuplicateDefectInput = z.infer<typeof analyzeDuplicateDefectSchema>;
+export type AnalyzeRiskInput = z.infer<typeof analyzeRiskSchema>;
+export type GenerateQAReportInput = z.infer<typeof generateQAReportSchema>;
+export type ReviewAIGenerationItemInput = z.infer<typeof reviewAIGenerationItemSchema>;
+export type BatchReviewAIGenerationItemsInput = z.infer<typeof batchReviewAIGenerationItemsSchema>;
+export type SubmitAIFeedbackInput = z.infer<typeof submitAIFeedbackSchema>;
