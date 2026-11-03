@@ -15,6 +15,8 @@ import { billingRouter } from './routes/billing.routes.js';
 import { paymentWebhookRouter } from './routes/payment-webhook.routes.js';
 import { platformRouter } from './routes/platform.routes.js';
 
+import { metricsService } from './services/metrics.service.js';
+
 export function createApp(): Express {
   const app = express();
 
@@ -44,6 +46,7 @@ export function createApp(): Express {
     const startTime = Date.now();
     res.on('finish', () => {
       const duration = Date.now() - startTime;
+      metricsService.recordRequest(req.method, req.path, res.statusCode, duration);
       logger.info(`${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms`, {
         requestId,
         statusCode: res.statusCode,

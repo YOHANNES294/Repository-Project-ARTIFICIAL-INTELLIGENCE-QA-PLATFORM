@@ -74,7 +74,7 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
 
     next();
   } catch (error) {
-    if (error instanceof UnauthorizedError) {
+    if (error instanceof UnauthorizedError || error instanceof ForbiddenError) {
       next(error);
     } else {
       next(new UnauthorizedError('Invalid or expired authentication token'));

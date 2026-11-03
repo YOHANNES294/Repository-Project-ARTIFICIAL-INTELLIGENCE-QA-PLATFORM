@@ -83,3 +83,19 @@ healthRouter.get('/health/ready', async (_req: Request, res: Response) => {
     });
   }
 });
+
+healthRouter.get('/metrics', async (_req: Request, res: Response) => {
+  const { metricsService } = await import('../services/metrics.service.js');
+  const metrics = await metricsService.getPrometheusMetrics();
+  res.setHeader('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+  res.status(200).send(metrics);
+});
+
+healthRouter.get('/metrics/json', async (_req: Request, res: Response) => {
+  const { metricsService } = await import('../services/metrics.service.js');
+  const data = await metricsService.getMetricsJson();
+  res.status(200).json({
+    success: true,
+    data,
+  });
+});

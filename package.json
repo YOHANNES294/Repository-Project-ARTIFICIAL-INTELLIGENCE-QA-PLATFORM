@@ -14,6 +14,11 @@
     "test": "pnpm -r test",
     "test:unit": "vitest run",
     "db:generate": "prisma generate --schema=database/prisma/schema.prisma",
+    "backup": "powershell -ExecutionPolicy Bypass -File scripts/backup.ps1",
+    "restore": "powershell -ExecutionPolicy Bypass -File scripts/restore.ps1",
+    "verify:backup": "node --experimental-strip-types scripts/verify-backup.ts",
+    "test:load": "node --experimental-strip-types tests/load/load-tester.ts",
+    "test:e2e": "pnpm --filter @ai-qa/api test test/e2e-acceptance.test.ts",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down"
   },

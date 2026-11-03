@@ -1,0 +1,49 @@
+{
+  "totalRequests": 2623,
+  "successfulRequests": 2077,
+  "failedRequests": 546,
+  "concurrency": 20,
+  "durationSeconds": 10.05,
+  "throughputRps": 261,
+  "latencyMs": {
+    "min": 1,
+    "max": 992,
+    "avg": 43,
+    "p50": 25,
+    "p90": 107,
+    "p95": 130,
+    "p99": 252
+  },
+  "endpoints": {
+    "/health/live": {
+      "calls": 521,
+      "avgMs": 21,
+      "p95Ms": 32
+    },
+    "/health/ready": {
+      "calls": 546,
+      "avgMs": 125,
+      "p95Ms": 251
+    },
+    "/metrics": {
+      "calls": 520,
+      "avgMs": 22,
+      "p95Ms": 32
+    },
+    "/metrics/json": {
+      "calls": 488,
+      "avgMs": 21,
+      "p95Ms": 32
+    },
+    "/billing/plans": {
+      "calls": 548,
+      "avgMs": 22,
+      "p95Ms": 32
+    }
+  },
+  "memory": {
+    "beforeMb": 131,
+    "afterMb": 260,
+    "deltaMb": 129
+  }
+}

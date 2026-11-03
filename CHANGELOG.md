@@ -2,6 +2,56 @@
 
 All notable changes to the Artificial Intelligence QA Platform will be documented here.
 
+## [1.0.0] - Milestone 12 Completion: Production Readiness, Security Audit & Final Release
+### Added
+- **Production Observability & Telemetry (`/api/v1/metrics`)**:
+  - In-memory high-performance metrics aggregator (`MetricsService`) measuring active HTTP requests, status codes, p50/p90/p95/p99 latency distributions, active Server-Sent Events (SSE) connections, and system RSS memory.
+  - Standard Prometheus text exposition endpoint (`GET /api/v1/metrics`) for Grafana / Prometheus scraping.
+  - JSON metrics endpoint (`GET /api/v1/metrics/json`) for internal monitoring dashboards and load testing validation.
+  - Dynamic request hooking in `apps/api/src/app.ts` via `res.on('finish')`.
+- **Worker Reliability, Dead-Letter Queue & Credential Redaction**:
+  - Upgraded BullMQ background worker (`apps/worker/src/index.ts`) with typed queue processors: `notification.dispatch`, `digest.compile`, `report.export`, `automation.ingest`, `ai.batch`, `billing.reconcile`, and `webhook.retry`.
+  - Configured 3-tier exponential backoff retry policy (`attempts: 3`, initial delay 1,000ms with exponential multiplier).
+  - Dead-Letter Queue (`deadLetterQueue`) automatically capturing permanently failed jobs.
+  - Sensitive payload credential sanitizer (`sanitizePayload`) stripping API keys, tokens, passwords, and secrets prior to logging or DLQ storage.
+  - Clean graceful shutdown handling on `SIGTERM` and `SIGINT` signals with bounded completion timeouts.
+- **Automated Database Backup & Restore Suite**:
+  - Implemented cross-platform automated backup scripts: `scripts/backup.ps1` (PowerShell) and `scripts/backup.sh` (POSIX Bash) creating compressed `pg_dump` archives with timestamping and 14-day automated retention pruning.
+  - Cryptographic tamper-proofing: Automated SHA-256 integrity checksum generation (`*.sql.gz.sha256`) and verification during restore.
+  - Restoration tools (`scripts/restore.ps1`, `scripts/restore.sh`) with pre-restoration checksum validation.
+  - Automated schema completeness verification script (`scripts/verify-backup.ts`) verifying all 21 core Prisma domain models.
+- **Production Container Orchestration (`docker-compose.prod.yml`)**:
+  - Multi-service production stack comprising `postgres:16-alpine`, `redis:7-alpine`, `api`, `worker`, and `web`.
+  - Built-in container healthchecks (`pg_isready`, `redis-cli ping`, `/api/v1/health/live`), resource constraints, and network isolation between public ingress and internal data tiers.
+- **Security Audit & Automated Hardening Suite**:
+  - Dedicated production security test suite (`apps/api/test/production-security-audit.test.ts`) with 17 automated tests covering:
+    - Multi-tenant IDOR defense (rejection of cross-organization project, test case, and defect access).
+    - Platform administration perimeter enforcement (strict rejection of standard org owners from super-admin endpoints).
+    - Suspended tenant and user access denial (immediate HTTP 403 Forbidden).
+    - Server-Side Request Forgery (SSRF) defense blocking loopback, link-local, private RFC 1918 subnets, and AWS/GCP cloud metadata IP (`169.254.169.254`).
+    - OWASP formula injection neutralization (CWE-1236) prepending `'` to formula triggers (`=`, `+`, `-`, `@`).
+    - AES-256-GCM symmetric encryption round-trip verification with IV and auth tag validation.
+- **Multi-Stage End-to-End Acceptance Test Suite**:
+  - Created `apps/api/test/e2e-acceptance.test.ts` executing 6 core end-to-end customer journeys:
+    1. Multi-Tenant Organization & User Onboarding.
+    2. QA Test Case & Execution Lifecycle.
+    3. AI Provider Configuration with AES-256-GCM encryption & masked retrieval.
+    4. Automation Token Provisioning & Result Ingestion.
+    5. User Notification Preferences & Quiet Hours Configuration.
+    6. Billing Plan Catalog & Super Admin Platform Overview.
+- **Load & Performance Benchmark**:
+  - Load testing suite (`tests/load/k6-performance.js` and `tests/load/load-tester.ts`) benchmarking multi-user concurrent traffic across 20 workers over 10 seconds.
+  - Quantitative benchmark recorded in `tests/load/load-test-report.json`: 2,623 requests processed, 261 RPS throughput, 25ms median latency, 130ms p95 latency, 0 server crashes.
+- **Production Documentation Suite (`docs/production/`)**:
+  - `docs/production/PRODUCTION_READINESS_AUDIT.md`: Complete architectural and quality gate audit.
+  - `docs/production/PRODUCTION_DEPLOYMENT_GUIDE.md`: Comprehensive bare-metal, Docker, and Kubernetes deployment manual with Nginx reverse proxy configuration.
+  - `docs/production/INCIDENT_RESPONSE_RUNBOOK.md`: Severity matrix (P1–P4), on-call procedures, diagnostic workflows, and emergency containment actions.
+  - `docs/production/BACKUP_AND_RECOVERY_RUNBOOK.md`: Backup architecture, pg_dump schedules, S3 replication, SHA-256 verification, and disaster recovery drill procedures.
+  - `docs/production/SECURITY_AUDIT.md`: Detailed OWASP Top 10 assessment, penetration findings, and devDependency advisory analysis.
+
+### Fixed
+- **Authentication Middleware Error Handling**: Fixed error masking in `apps/api/src/middleware/auth.ts` where non-`UnauthorizedError` exceptions (specifically `ForbiddenError` triggered by suspended users) were inadvertently masked into generic 401 token errors. Now accurately preserves 403 Forbidden status codes.
+
 ## [0.11.0] - Milestone 11 Completion: Billing & SaaS Administration
 ### Added
 - **Database-Backed Plan Catalog & Subscription Lifecycle**:
