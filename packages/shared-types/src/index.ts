@@ -27,10 +27,17 @@ export enum ProjectRole {
 // Milestone Status
 export enum MilestoneStatus {
   PLANNED = 'PLANNED',
-  ACTIVE = 'ACTIVE',
+  IN_PROGRESS = 'IN_PROGRESS',
   COMPLETED = 'COMPLETED',
-  DELAYED = 'DELAYED',
+  BLOCKED = 'BLOCKED',
   CANCELLED = 'CANCELLED',
+}
+
+// Test Case Status
+export enum TestCaseStatus {
+  DRAFT = 'DRAFT',
+  ACTIVE = 'ACTIVE',
+  DEPRECATED = 'DEPRECATED',
 }
 
 // Test Types
@@ -192,3 +199,202 @@ export interface EnvironmentDto {
   createdAt: string;
   updatedAt: string;
 }
+
+// ----------------------------------------------------
+// MILESTONE & TEST MANAGEMENT DTOS (Milestone 04)
+// ----------------------------------------------------
+
+export interface MilestoneProgressDto {
+  totalRuns: number;
+  passedRuns: number;
+  failedRuns: number;
+  blockedRuns: number;
+  skippedRuns: number;
+  totalCases: number;
+  completionPercentage: number;
+  openDefects: number;
+}
+
+export interface MilestoneDto {
+  id: string;
+  projectId: string;
+  name: string;
+  description: string | null;
+  objectives: string | null;
+  status: MilestoneStatus;
+  priority: TestPriority;
+  releaseVer: string | null;
+  startDate: string | null;
+  dueDate: string | null;
+  completedAt: string | null;
+  ownerId: string | null;
+  owner?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    avatarUrl: string | null;
+  } | null;
+  createdAt: string;
+  updatedAt: string;
+  progress?: MilestoneProgressDto;
+  _count?: {
+    testPlans: number;
+    testRuns: number;
+    testCases: number;
+    defects: number;
+  };
+}
+
+export interface TestSuiteDto {
+  id: string;
+  projectId: string;
+  parentId: string | null;
+  name: string;
+  description: string | null;
+  objectives: string | null;
+  orderIndex: number;
+  createdAt: string;
+  updatedAt: string;
+  children?: TestSuiteDto[];
+  _count?: {
+    testCases: number;
+    children: number;
+  };
+}
+
+export interface TagDto {
+  id: string;
+  projectId: string;
+  name: string;
+  color: string;
+  createdAt: string;
+  _count?: {
+    testCases: number;
+  };
+}
+
+export interface TestStepDto {
+  id?: string;
+  testCaseVersionId?: string;
+  stepNumber: number;
+  action: string;
+  testData: string | null;
+  expectedResult: string;
+}
+
+export interface TestCaseVersionDto {
+  id: string;
+  testCaseId: string;
+  versionNumber: number;
+  title: string;
+  description: string | null;
+  preconditions: string | null;
+  objectives: string | null;
+  priority: TestPriority;
+  type: TestType;
+  status: TestCaseStatus;
+  changeSummary: string | null;
+  createdById: string | null;
+  createdBy?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+  createdAt: string;
+  steps: TestStepDto[];
+}
+
+export interface TestCaseDto {
+  id: string;
+  projectId: string;
+  suiteId: string | null;
+  milestoneId: string | null;
+  caseNumber: number;
+  key?: string; // e.g. "CORE-101"
+  title: string;
+  description: string | null;
+  preconditions: string | null;
+  objectives: string | null;
+  priority: TestPriority;
+  type: TestType;
+  status: TestCaseStatus;
+  estimatedTimeMin: number | null;
+  isArchived: boolean;
+  currentVersion: number;
+  authorId: string | null;
+  author?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+  tags: TagDto[];
+  suite?: {
+    id: string;
+    name: string;
+  } | null;
+  milestone?: {
+    id: string;
+    name: string;
+  } | null;
+  currentVersionDetails?: TestCaseVersionDto;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VersionDiffDto {
+  versionA: number;
+  versionB: number;
+  titleChanged: boolean;
+  descriptionChanged: boolean;
+  preconditionsChanged: boolean;
+  objectivesChanged: boolean;
+  priorityChanged: boolean;
+  typeChanged: boolean;
+  statusChanged: boolean;
+  stepsChanged: boolean;
+  detailsA: TestCaseVersionDto;
+  detailsB: TestCaseVersionDto;
+}
+
+export interface CsvImportRowData {
+  title: string;
+  description?: string;
+  preconditions?: string;
+  objectives?: string;
+  priority?: string;
+  type?: string;
+  status?: string;
+  estimatedTimeMin?: number;
+  suiteName?: string;
+  tags?: string[];
+  steps?: Array<{
+    stepNumber: number;
+    action: string;
+    testData?: string;
+    expectedResult: string;
+  }>;
+}
+
+export interface CsvImportPreviewRow {
+  rowNumber: number;
+  isValid: boolean;
+  errors: string[];
+  data: CsvImportRowData;
+}
+
+export interface CsvImportPreviewResponse {
+  totalRows: number;
+  validRows: number;
+  invalidRows: number;
+  preview: CsvImportPreviewRow[];
+}
+
+export interface CsvBulkImportInput {
+  rows: CsvImportRowData[];
+  defaultSuiteId?: string | null;
+  defaultMilestoneId?: string | null;
+}
+

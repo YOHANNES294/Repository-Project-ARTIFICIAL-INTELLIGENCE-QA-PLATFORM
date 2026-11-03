@@ -29,8 +29,20 @@
 ## 3. Environment Secret Protection
 - Environment configuration dictionaries (`variables`) are sanitized by the backend service. Any sensitive key containing substrings such as `secret`, `key`, `pass`, `token`, or `auth` is masked (`••••••••`) before API delivery, preventing credential leakage in responses or browser state.
 
-## 4. Defense-in-Depth Protections
+## 4. Test Management & Data Integrity Security
+
+- **CSV / Spreadsheet Formula Injection (CSV Injection) Prevention**:
+  - In accordance with OWASP guidelines, export routines in `csv.service.ts` sanitize all cell values against formula execution vulnerabilities.
+  - Any field whose first character is `=`, `+`, `-`, `@`, `\t` (tab), or `\r` (carriage return) is prefixed with a single quotation mark (`'`), neutralizing macro execution and dynamic DDE evaluation in Microsoft Excel, LibreOffice, and Google Sheets.
+- **Test Execution Deletion Safeguards**:
+  - Test cases that have been executed in historical `TestRun` records cannot be deleted. The repository layer checks for linked execution records before executing any deletion, returning `409 Conflict` to preserve the non-repudiable audit trail of software release compliance.
+- **Immutable Test Case Versioning**:
+  - Test case steps and content are version-pinned in `TestCaseVersion`. Test executions link directly to specific version snapshots, guaranteeing that future edits to a test case cannot alter historical execution logs or audit compliance records.
+- **Hierarchical Suite Cycle Prevention**:
+  - Moving or reparenting a test suite executes recursive ancestor tree traversal. Any attempt to set a suite's parent to itself or to any of its descendant folders is blocked with `400 Bad Request`, preventing infinite recursion and denial-of-service in graph traversal algorithms.
+
+## 5. Defense-in-Depth Protections
 - **Rate Limiting**: `express-rate-limit` enforces strict limits on authentication endpoints (30 requests / 15 minutes) to protect against brute force and credential stuffing.
 - **Timing-Attack Protection**: Password reset requests do not disclose whether an email address exists in the system.
-- **Audit Logging**: All authentication, organization, project, member, and environment operations create structured entries in `AuditLog`.
+- **Audit Logging**: All authentication, organization, project, member, environment, milestone, test suite, and test case operations create structured entries in `AuditLog`.
 - **HTTP Security Headers**: Powered by `helmet`, including CSP, HSTS, frame protection, and content type sniffing prevention.

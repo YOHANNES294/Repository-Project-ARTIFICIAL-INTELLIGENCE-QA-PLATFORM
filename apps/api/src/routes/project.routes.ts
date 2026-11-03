@@ -10,6 +10,10 @@ import {
 } from '@ai-qa/validation';
 import { authenticate, requireTenant, requireRole } from '../middleware/auth.js';
 import { OrganizationRole, ProjectStatus, ProjectRole, ApiResponse } from '@ai-qa/shared-types';
+import { milestoneRouter } from './milestone.routes.js';
+import { testSuiteRouter } from './test-suite.routes.js';
+import { tagRouter } from './tag.routes.js';
+import { testCaseRouter } from './test-case.routes.js';
 
 export const projectRouter: Router = Router();
 
@@ -123,6 +127,9 @@ projectRouter.patch(
   }
 );
 
+
+
+
 // Archive project
 projectRouter.post(
   '/:projectId/archive',
@@ -151,6 +158,9 @@ projectRouter.post(
     }
   }
 );
+
+
+
 
 // Restore archived project
 projectRouter.post(
@@ -181,6 +191,9 @@ projectRouter.post(
   }
 );
 
+
+
+
 // Delete project (requires project to be archived first)
 projectRouter.delete(
   '/:projectId',
@@ -209,6 +222,9 @@ projectRouter.delete(
     }
   }
 );
+
+
+
 
 // Project Activity history
 projectRouter.get('/:projectId/activity', async (req: Request, res: Response, next: NextFunction) => {
@@ -314,6 +330,9 @@ projectRouter.patch(
   }
 );
 
+
+
+
 projectRouter.delete(
   '/:projectId/members/:memberId',
   requireRole(OrganizationRole.QA_MANAGER, OrganizationRole.ADMINISTRATOR),
@@ -342,6 +361,9 @@ projectRouter.delete(
     }
   }
 );
+
+
+
 
 // ----------------------------------------------------
 // PROJECT ENVIRONMENTS ROUTES
@@ -425,6 +447,9 @@ projectRouter.patch(
   }
 );
 
+
+
+
 projectRouter.delete(
   '/:projectId/environments/:envId',
   requireRole(OrganizationRole.QA_MANAGER, OrganizationRole.ADMINISTRATOR),
@@ -453,3 +478,13 @@ projectRouter.delete(
     }
   }
 );
+
+// Mount Milestone 04 subrouters scoped to project
+projectRouter.use('/:projectId/milestones', milestoneRouter);
+projectRouter.use('/:projectId/suites', testSuiteRouter);
+projectRouter.use('/:projectId/tags', tagRouter);
+projectRouter.use('/:projectId/test-cases', testCaseRouter);
+
+
+
+

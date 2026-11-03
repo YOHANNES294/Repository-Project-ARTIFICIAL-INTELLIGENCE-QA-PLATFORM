@@ -6,7 +6,7 @@
 - **Primary Keys**: UUID v4
 - **Referential Integrity**: Foreign key constraints with explicit cascade and set-null rules.
 
-## 2. Implemented Domain Models (Milestones 01, 02, 03)
+## 2. Implemented Domain Models (Milestones 01, 02, 03, 04)
 
 ### Multi-Tenancy, Users & Authentication
 - **`User`**: Account identity, Argon2id `passwordHash`, profile attributes, verification flag.
@@ -57,3 +57,92 @@
   - Constraints:
     - `@@unique([projectId, name])` (unique environment name per project)
     - `@@index([projectId])`
+
+### Milestone & Test Management Domain (Milestone 04)
+
+- **`Milestone`**:
+  - `id`: UUID Primary Key
+  - `projectId`: Foreign key to `Project` (Cascade delete)
+  - `name`: Milestone name (e.g. "Release 1.0", "Sprint 42 Hardening")
+  - `description`: Detailed description
+  - `objectives`: Milestone exit criteria & quality goals
+  - `status`: `MilestoneStatus` enum (`PLANNED`, `IN_PROGRESS`, `COMPLETED`, `BLOCKED`, `CANCELLED`)
+  - `priority`: `Priority` enum (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`)
+  - `startDate`, `dueDate`: Optional temporal bounding (`dueDate >= startDate`)
+  - `ownerId`: Optional foreign key to `User` (assigned owner)
+  - Dynamic Progress: Evaluated on read by aggregating real test execution results (`PASSED`, `FAILED`, `BLOCKED`, `SKIPPED`) and linked defect resolution states.
+  - Constraints & Indexes:
+    - `@@unique([projectId, name])`
+    - `@@index([projectId])`
+    - `@@index([projectId, status])`
+
+- **`TestSuite`**:
+  - `id`: UUID Primary Key
+  - `projectId`: Foreign key to `Project` (Cascade delete)
+  - `parentId`: Optional foreign key to `TestSuite` (enables unlimited nested hierarchies)
+  - `name`: Folder / Suite display name
+  - `description`: Suite purpose
+  - `objectives`: Suite testing objectives
+  - Hierarchy Safety: Backend checks entire ancestor chain to prevent self-parenting and cyclic graph loops.
+  - Constraints & Indexes:
+    - `@@unique([projectId, parentId, name])`
+    - `@@index([projectId])`
+    - `@@index([parentId])`
+
+- **`Tag`**:
+  - `id`: UUID Primary Key
+  - `projectId`: Foreign key to `Project` (Cascade delete)
+  - `name`: Tag label (e.g. "smoke", "regression", "auth")
+  - `color`: Hex color representation
+  - Constraints & Indexes:
+    - `@@unique([projectId, name])` (unique tag label per project)
+    - `@@index([projectId])`
+
+- **`TestCase`**:
+  - `id`: UUID Primary Key
+  - `projectId`: Foreign key to `Project` (Cascade delete)
+  - `suiteId`: Optional foreign key to `TestSuite` (Set Null on suite delete)
+  - `milestoneId`: Optional foreign key to `Milestone` (Set Null on milestone delete)
+  - `caseNumber`: Project-scoped sequential integer (e.g., `CORE-101`)
+  - `title`: Test case summary
+  - `description`: Detailed scope
+  - `preconditions`: Prerequisites before test execution
+  - `objectives`: Specific test objectives
+  - `type`: `TestCaseType` enum (`FUNCTIONAL`, `REGRESSION`, `SMOKE`, `INTEGRATION`, `E2E`, `PERFORMANCE`, `SECURITY`, `ACCESSIBILITY`, `API`)
+  - `priority`: `Priority` enum (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`)
+  - `status`: `TestCaseStatus` enum (`DRAFT`, `ACTIVE`, `DEPRECATED`)
+  - `estimatedTimeMin`: Execution duration estimation in minutes
+  - `authorId`: Foreign key to `User` (test case creator)
+  - `tags`: Many-to-many relationship with `Tag`
+  - Deletion Safeguard: Blocked if test executions are linked in any `TestRun`.
+  - Constraints & Indexes:
+    - `@@unique([projectId, caseNumber])`
+    - `@@index([projectId])`
+    - `@@index([projectId, suiteId])`
+    - `@@index([projectId, status])`
+    - `@@index([projectId, priority])`
+
+- **`TestCaseVersion`**:
+  - `id`: UUID Primary Key
+  - `testCaseId`: Foreign key to `TestCase` (Cascade delete)
+  - `versionNumber`: Incremental version number (1, 2, 3...)
+  - `title`, `description`, `preconditions`, `objectives`: Snapshot of test content
+  - `type`, `priority`, `status`: Snapshot of classification
+  - `changeSummary`: Textual record of what changed between versions
+  - `createdById`: Foreign key to `User` who authored this version
+  - `createdAt`: Immutable timestamp
+  - `steps`: One-to-many relation to `TestStep`
+  - Constraints & Indexes:
+    - `@@unique([testCaseId, versionNumber])`
+    - `@@index([testCaseId])`
+
+- **`TestStep`**:
+  - `id`: UUID Primary Key
+  - `testCaseVersionId`: Foreign key to `TestCaseVersion` (Cascade delete)
+  - `stepNumber`: 1-based ordering index
+  - `action`: Step instruction
+  - `testData`: Input arguments or parameters
+  - `expectedResult`: Verifiable outcome
+  - Constraints & Indexes:
+    - `@@unique([testCaseVersionId, stepNumber])`
+    - `@@index([testCaseVersionId])`

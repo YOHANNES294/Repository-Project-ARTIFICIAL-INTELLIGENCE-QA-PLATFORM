@@ -2,6 +2,45 @@
 
 All notable changes to the Artificial Intelligence QA Platform will be documented here.
 
+## [0.4.0] - Milestone 04 Completion: Milestone & Test Management
+### Added
+- **Milestone Management**:
+  - Domain model `Milestone` with statuses (`PLANNED`, `IN_PROGRESS`, `COMPLETED`, `BLOCKED`, `CANCELLED`) and priorities (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`).
+  - Dynamic progress calculation evaluating actual execution results (`PASSED`, `FAILED`, `BLOCKED`, `SKIPPED`) and linked defect resolution states.
+  - Date range validation (`dueDate >= startDate`) and owner assignment.
+  - REST endpoints under `/api/v1/projects/:projectId/milestones` with search, filtering, and audit logging.
+- **Hierarchical Test Suite Management**:
+  - Reusable, nested test suite folders with self-referencing `parentId`.
+  - Circular parenting and self-parenting prevention via recursive ancestor chain validation.
+  - Real-time test case counts aggregated across child suites.
+  - REST endpoints under `/api/v1/projects/:projectId/test-suites`.
+- **Project-Scoped Tags**:
+  - Tag entity with custom hex colors and usage counts per project.
+  - REST endpoints under `/api/v1/projects/:projectId/tags`.
+- **Test Case Management**:
+  - Sequential case numbers (`KEY-101`) generated per project.
+  - Detailed metadata: title, description, preconditions, objectives, type, priority, status (`DRAFT`, `ACTIVE`, `DEPRECATED`), estimated execution time.
+  - Ordered test steps (`stepNumber`, `action`, `testData`, `expectedResult`) with step reordering.
+  - Immutable test case versioning (`TestCaseVersion`) created on content changes with change summaries.
+  - Version comparison diff engine computing additions, deletions, modifications, and step diffs.
+  - Historical execution deletion safeguard preventing removal of test cases with execution history.
+  - REST endpoints under `/api/v1/projects/:projectId/test-cases`.
+- **CSV Import & Export Engine**:
+  - RFC 4180 compliant CSV parser with quote escaping and multiline cell support.
+  - Pre-import validation engine generating an interactive preview table with row error reporting before transaction commit.
+  - Transactional bulk import creating test cases, version 1 records, and ordered test steps atomically.
+  - CSV export with Spreadsheet Formula Injection (CSV Injection) sanitization (`=`, `+`, `-`, `@`, `\t`, `\r` escaped with single quote).
+- **Frontend Next.js 16 UI**:
+  - Milestones Management (`/projects/[projectId]/milestones`) with progress bars, status badges, and filter bars.
+  - Hierarchical Test Suites Explorer (`/projects/[projectId]/test-suites`) with collapsible tree navigation.
+  - Test Case Repository (`/projects/[projectId]/test-cases`) with full-text search, multi-filter dropdowns, and batch operations.
+  - Multi-step Test Case Creator & Editor (`/projects/[projectId]/test-cases/new`, `.../[caseId]`) with step reordering.
+  - Side-by-side Version History & Diff Viewer (`/projects/[projectId]/test-cases/[caseId]/versions`).
+  - CSV Import modal with drag-and-drop file upload, real-time schema validation, and row preview table.
+- **Automated Verification**:
+  - 18 new automated unit & integration tests covering milestones, test suites, test cases, versioning, CSV formula injection, and bulk import.
+  - Total test suite expanded to 50 passing tests across 8 test suites (100% success rate).
+
 ## [0.3.0] - Milestone 03 Completion: Project Management
 ### Added
 - Project domain models (`Project`, `ProjectMember`, `Environment`) with `ProjectStatus` and `ProjectRole` enums.

@@ -160,3 +160,56 @@ Retrieves chronological audit log entries for project modifications.
 - `POST /api/v1/projects/:projectId/environments`: Creates a new environment (`DEVELOPMENT`, `TESTING`, `STAGING`, `PRODUCTION`, `CUSTOM`).
 - `PATCH /api/v1/projects/:projectId/environments/:envId`: Updates environment URL, description, variables, or active status.
 - `DELETE /api/v1/projects/:projectId/environments/:envId`: Deletes environment.
+
+---
+
+## 8. Milestone Management Endpoints (`/api/v1/projects/:projectId/milestones`)
+- `GET /api/v1/projects/:projectId/milestones`: Lists project milestones with search, status filtering, priority filtering, and dynamic QA progress calculation (completion %, passed/failed/blocked test runs, open defects).
+- `GET /api/v1/projects/:projectId/milestones/:milestoneId`: Returns milestone details and full execution progress breakdown.
+- `GET /api/v1/projects/:projectId/milestones/:milestoneId/progress`: Returns granular progress metrics.
+- `POST /api/v1/projects/:projectId/milestones`: Creates a new milestone. Validates `dueDate >= startDate`.
+  - Roles: `QA_MANAGER`, `ADMINISTRATOR`, `OWNER`.
+  - Statuses: `PLANNED`, `IN_PROGRESS`, `COMPLETED`, `BLOCKED`, `CANCELLED`.
+  - Priorities: `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`.
+- `PATCH /api/v1/projects/:projectId/milestones/:milestoneId`: Updates milestone. Setting status to `COMPLETED` automatically timestamps `completedAt`.
+- `DELETE /api/v1/projects/:projectId/milestones/:milestoneId`: Deletes milestone and writes audit log.
+
+---
+
+## 9. Hierarchical Test Suite Endpoints (`/api/v1/projects/:projectId/suites`)
+- `GET /api/v1/projects/:projectId/suites`: Returns hierarchical folder tree (root suites with recursively nested `children` arrays, case counts, and child suite counts).
+- `GET /api/v1/projects/:projectId/suites/:suiteId`: Retrieves suite details, parent reference, and sub-suites.
+- `POST /api/v1/projects/:projectId/suites`: Creates a root or child test suite.
+  - Roles: `QA_ENGINEER`, `AUTOMATION_ENGINEER`, `QA_MANAGER`, `ADMINISTRATOR`, `OWNER`.
+- `PATCH /api/v1/projects/:projectId/suites/:suiteId`: Updates test suite. Features circular reference prevention (blocks moving a suite into its own descendant or setting itself as parent).
+- `DELETE /api/v1/projects/:projectId/suites/:suiteId`: Deletes test suite.
+
+---
+
+## 10. Tag Management Endpoints (`/api/v1/projects/:projectId/tags`)
+- `GET /api/v1/projects/:projectId/tags`: Lists project-scoped tags with usage counts (`_count.testCases`).
+- `POST /api/v1/projects/:projectId/tags`: Creates unique tag within project.
+- `PATCH /api/v1/projects/:projectId/tags/:tagId`: Updates tag name or hex color.
+- `DELETE /api/v1/projects/:projectId/tags/:tagId`: Deletes tag.
+
+---
+
+## 11. Test Case Management & Versioning (`/api/v1/projects/:projectId/test-cases`)
+- `GET /api/v1/projects/:projectId/test-cases`: Lists test cases with search (key e.g. `CORE-1`, title, description), multi-filter (suite, milestone, priority, type, status, tag), pagination, and sorting.
+- `GET /api/v1/projects/:projectId/test-cases/:caseId`: Retrieves full test case with latest version snapshot, ordered steps, suite, milestone, author, and tags.
+- `POST /api/v1/projects/:projectId/test-cases`: Creates a new test case. Automatically generates project-scoped sequential key (`PROJECT-1`), creates version 1 (`TestCaseVersion`), and snapshots initial ordered steps (`TestStep`).
+  - Roles: `QA_ENGINEER`, `AUTOMATION_ENGINEER`, `QA_MANAGER`, `ADMINISTRATOR`, `OWNER`.
+- `PATCH /api/v1/projects/:projectId/test-cases/:caseId`: Updates test case. If title, description, priority, type, status, or steps change, automatically increments version number and creates a new immutable `TestCaseVersion` snapshot.
+- `POST /api/v1/projects/:projectId/test-cases/:caseId/archive`: Archives test case.
+- `POST /api/v1/projects/:projectId/test-cases/:caseId/restore`: Restores archived test case.
+- `DELETE /api/v1/projects/:projectId/test-cases/:caseId`: Permanently deletes test case. **Integrity Rule**: Blocked with `400 Bad Request` if test case has historical test run execution results to safeguard audit traceability.
+- `GET /api/v1/projects/:projectId/test-cases/:caseId/versions`: Lists all historical immutable version snapshots with author and change summaries.
+- `GET /api/v1/projects/:projectId/test-cases/:caseId/versions/:versionNumber`: Returns specific immutable version snapshot.
+- `GET /api/v1/projects/:projectId/test-cases/:caseId/versions/compare?v1=1&v2=2`: Computes diff between two versions, highlighting changes in title, priority, type, status, and individual steps.
+
+---
+
+## 12. CSV Import & Export Engine (`/api/v1/projects/:projectId/test-cases/csv/*`)
+- `POST /api/v1/projects/:projectId/test-cases/csv/preview`: Parses uploaded RFC 4180 CSV text and returns validation report (`totalRows`, `validRows`, `invalidRows`, and row-by-row error diagnostics) prior to importing.
+- `POST /api/v1/projects/:projectId/test-cases/csv/import`: Bulk imports valid rows inside a database transaction, auto-generating sequential keys, creating suites/tags, versions, and steps.
+- `GET /api/v1/projects/:projectId/test-cases/csv/export`: Streams RFC 4180 CSV file filtered by query parameters. **Formula Injection Sanitization**: Prepends single quote `'` to any cell beginning with `=`, `+`, `-`, `@`, `\t`, or `\r`.

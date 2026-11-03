@@ -121,35 +121,200 @@ export const updateEnvironmentSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
+export const createMilestoneSchema = z
+  .object({
+    name: z.string().min(2, 'Milestone name must be at least 2 characters').max(100).trim(),
+    description: z.string().max(2000).optional().nullable(),
+    objectives: z.string().max(2000).optional().nullable(),
+    status: z.enum(['PLANNED', 'IN_PROGRESS', 'COMPLETED', 'BLOCKED', 'CANCELLED']).default('PLANNED'),
+    priority: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']).default('MEDIUM'),
+    releaseVer: z.string().max(50).optional().nullable(),
+    startDate: z.string().datetime({ offset: true }).or(z.string().regex(/^\d{4}-\d{2}-\d{2}/)).optional().nullable(),
+    dueDate: z.string().datetime({ offset: true }).or(z.string().regex(/^\d{4}-\d{2}-\d{2}/)).optional().nullable(),
+    ownerId: z.string().uuid('Invalid owner ID format').optional().nullable(),
+  })
+  .refine(
+    (data) => {
+      if (data.startDate && data.dueDate) {
+        return new Date(data.dueDate).getTime() >= new Date(data.startDate).getTime();
+      }
+      return true;
+    },
+    {
+      message: 'Due date cannot be earlier than start date',
+      path: ['dueDate'],
+    }
+  );
+
+export const updateMilestoneSchema = z
+  .object({
+    name: z.string().min(2, 'Milestone name must be at least 2 characters').max(100).trim().optional(),
+    description: z.string().max(2000).optional().nullable(),
+    objectives: z.string().max(2000).optional().nullable(),
+    status: z.enum(['PLANNED', 'IN_PROGRESS', 'COMPLETED', 'BLOCKED', 'CANCELLED']).optional(),
+    priority: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']).optional(),
+    releaseVer: z.string().max(50).optional().nullable(),
+    startDate: z.string().datetime({ offset: true }).or(z.string().regex(/^\d{4}-\d{2}-\d{2}/)).optional().nullable(),
+    dueDate: z.string().datetime({ offset: true }).or(z.string().regex(/^\d{4}-\d{2}-\d{2}/)).optional().nullable(),
+    completedAt: z.string().datetime({ offset: true }).or(z.string().regex(/^\d{4}-\d{2}-\d{2}/)).optional().nullable(),
+    ownerId: z.string().uuid('Invalid owner ID format').optional().nullable(),
+  })
+  .refine(
+    (data) => {
+      if (data.startDate && data.dueDate) {
+        return new Date(data.dueDate).getTime() >= new Date(data.startDate).getTime();
+      }
+      return true;
+    },
+    {
+      message: 'Due date cannot be earlier than start date',
+      path: ['dueDate'],
+    }
+  );
+
+export const createTestSuiteSchema = z.object({
+  name: z.string().min(2, 'Suite name must be at least 2 characters').max(100).trim(),
+  description: z.string().max(2000).optional().nullable(),
+  objectives: z.string().max(2000).optional().nullable(),
+  parentId: z.string().uuid('Invalid parent suite ID format').optional().nullable(),
+  orderIndex: z.number().int().min(0).default(0),
+});
+
+export const updateTestSuiteSchema = z.object({
+  name: z.string().min(2, 'Suite name must be at least 2 characters').max(100).trim().optional(),
+  description: z.string().max(2000).optional().nullable(),
+  objectives: z.string().max(2000).optional().nullable(),
+  parentId: z.string().uuid('Invalid parent suite ID format').optional().nullable(),
+  orderIndex: z.number().int().min(0).optional(),
+});
+
+export const createTagSchema = z.object({
+  name: z.string().min(1, 'Tag name is required').max(50).trim(),
+  color: z
+    .string()
+    .regex(/^#([0-9a-fA-F]{3}){1,2}$/, 'Color must be a valid hex code (e.g. #3B82F6)')
+    .default('#3B82F6'),
+});
+
+export const updateTagSchema = z.object({
+  name: z.string().min(1, 'Tag name is required').max(50).trim().optional(),
+  color: z
+    .string()
+    .regex(/^#([0-9a-fA-F]{3}){1,2}$/, 'Color must be a valid hex code (e.g. #3B82F6)')
+    .optional(),
+});
+
+export const testStepSchema = z.object({
+  id: z.string().uuid().optional(),
+  stepNumber: z.number().int().positive('Step number must be a positive integer'),
+  action: z.string().min(1, 'Action description is required').max(2000),
+  testData: z.string().max(2000).optional().nullable(),
+  expectedResult: z.string().min(1, 'Expected result is required').max(2000),
+});
+
 export const createTestCaseSchema = z.object({
   title: z.string().min(3, 'Title is required').max(255).trim(),
-  description: z.string().max(5000).optional(),
-  preconditions: z.string().max(2000).optional(),
+  description: z.string().max(5000).optional().nullable(),
+  preconditions: z.string().max(2000).optional().nullable(),
+  objectives: z.string().max(2000).optional().nullable(),
   priority: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']).default('MEDIUM'),
-  type: z.enum([
-    'FUNCTIONAL',
-    'REGRESSION',
-    'SMOKE',
-    'SANITY',
-    'INTEGRATION',
-    'SYSTEM',
-    'ACCEPTANCE',
-    'PERFORMANCE',
-    'SECURITY',
-    'USABILITY',
-    'ACCESSIBILITY',
-    'EXPLORATORY',
-  ]).default('FUNCTIONAL'),
+  type: z
+    .enum([
+      'FUNCTIONAL',
+      'REGRESSION',
+      'SMOKE',
+      'SANITY',
+      'INTEGRATION',
+      'SYSTEM',
+      'ACCEPTANCE',
+      'PERFORMANCE',
+      'SECURITY',
+      'USABILITY',
+      'ACCESSIBILITY',
+      'EXPLORATORY',
+    ])
+    .default('FUNCTIONAL'),
+  status: z.enum(['DRAFT', 'ACTIVE', 'DEPRECATED']).default('ACTIVE'),
+  estimatedTimeMin: z.number().int().min(0).max(1440).optional().nullable(),
+  suiteId: z.string().uuid('Invalid suite ID').optional().nullable(),
+  milestoneId: z.string().uuid('Invalid milestone ID').optional().nullable(),
+  tags: z.array(z.string().min(1).max(50)).default([]),
+  steps: z.array(testStepSchema).min(1, 'At least one test step is required'),
+});
+
+export const updateTestCaseSchema = z.object({
+  title: z.string().min(3, 'Title is required').max(255).trim().optional(),
+  description: z.string().max(5000).optional().nullable(),
+  preconditions: z.string().max(2000).optional().nullable(),
+  objectives: z.string().max(2000).optional().nullable(),
+  priority: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']).optional(),
+  type: z
+    .enum([
+      'FUNCTIONAL',
+      'REGRESSION',
+      'SMOKE',
+      'SANITY',
+      'INTEGRATION',
+      'SYSTEM',
+      'ACCEPTANCE',
+      'PERFORMANCE',
+      'SECURITY',
+      'USABILITY',
+      'ACCESSIBILITY',
+      'EXPLORATORY',
+    ])
+    .optional(),
+  status: z.enum(['DRAFT', 'ACTIVE', 'DEPRECATED']).optional(),
+  estimatedTimeMin: z.number().int().min(0).max(1440).optional().nullable(),
+  suiteId: z.string().uuid('Invalid suite ID').optional().nullable(),
+  milestoneId: z.string().uuid('Invalid milestone ID').optional().nullable(),
+  tags: z.array(z.string().min(1).max(50)).optional(),
+  steps: z.array(testStepSchema).min(1, 'At least one test step is required').optional(),
+  changeSummary: z.string().max(500).optional().nullable(),
+});
+
+export const csvImportRowSchema = z.object({
+  title: z.string().min(3, 'Title must be at least 3 characters').max(255).trim(),
+  description: z.string().max(5000).optional().nullable(),
+  preconditions: z.string().max(2000).optional().nullable(),
+  objectives: z.string().max(2000).optional().nullable(),
+  priority: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']).default('MEDIUM'),
+  type: z
+    .enum([
+      'FUNCTIONAL',
+      'REGRESSION',
+      'SMOKE',
+      'SANITY',
+      'INTEGRATION',
+      'SYSTEM',
+      'ACCEPTANCE',
+      'PERFORMANCE',
+      'SECURITY',
+      'USABILITY',
+      'ACCESSIBILITY',
+      'EXPLORATORY',
+    ])
+    .default('FUNCTIONAL'),
+  status: z.enum(['DRAFT', 'ACTIVE', 'DEPRECATED']).default('ACTIVE'),
+  estimatedTimeMin: z.number().int().min(0).max(1440).optional().nullable(),
+  suiteName: z.string().max(100).optional().nullable(),
+  tags: z.array(z.string()).default([]),
   steps: z
     .array(
       z.object({
         stepNumber: z.number().int().positive(),
         action: z.string().min(1, 'Action description is required'),
+        testData: z.string().max(2000).optional().nullable(),
         expectedResult: z.string().min(1, 'Expected result is required'),
       })
     )
     .min(1, 'At least one test step is required'),
-  tags: z.array(z.string()).default([]),
+});
+
+export const csvBulkImportSchema = z.object({
+  rows: z.array(csvImportRowSchema).min(1, 'At least one valid row is required for import'),
+  defaultSuiteId: z.string().uuid().optional().nullable(),
+  defaultMilestoneId: z.string().uuid().optional().nullable(),
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;
@@ -168,4 +333,14 @@ export type AddProjectMemberInput = z.infer<typeof addProjectMemberSchema>;
 export type UpdateProjectMemberRoleInput = z.infer<typeof updateProjectMemberRoleSchema>;
 export type CreateEnvironmentInput = z.infer<typeof createEnvironmentSchema>;
 export type UpdateEnvironmentInput = z.infer<typeof updateEnvironmentSchema>;
+export type CreateMilestoneInput = z.infer<typeof createMilestoneSchema>;
+export type UpdateMilestoneInput = z.infer<typeof updateMilestoneSchema>;
+export type CreateTestSuiteInput = z.infer<typeof createTestSuiteSchema>;
+export type UpdateTestSuiteInput = z.infer<typeof updateTestSuiteSchema>;
+export type CreateTagInput = z.infer<typeof createTagSchema>;
+export type UpdateTagInput = z.infer<typeof updateTagSchema>;
+export type TestStepInput = z.infer<typeof testStepSchema>;
 export type CreateTestCaseInput = z.infer<typeof createTestCaseSchema>;
+export type UpdateTestCaseInput = z.infer<typeof updateTestCaseSchema>;
+export type CsvImportRowInput = z.infer<typeof csvImportRowSchema>;
+export type CsvBulkImportInput = z.infer<typeof csvBulkImportSchema>;

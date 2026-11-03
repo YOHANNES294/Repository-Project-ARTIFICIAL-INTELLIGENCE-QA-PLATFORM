@@ -24,6 +24,10 @@ import {
   Clock,
   Sparkles,
   Edit,
+  CheckSquare,
+  FolderTree,
+  Milestone,
+  ArrowRight,
 } from 'lucide-react';
 
 export default function ProjectDetailPage() {
@@ -256,21 +260,36 @@ export default function ProjectDetailPage() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-slate-200 dark:border-slate-700 mt-6 -mb-6 space-x-6">
+        <div className="flex border-b border-slate-200 dark:border-slate-700 mt-6 -mb-6 space-x-6 overflow-x-auto">
           {[
-            { id: 'overview', label: 'Overview', icon: FolderGit2 },
-            { id: 'environments', label: `Environments (${project.environments?.length || 0})`, icon: Server },
-            { id: 'members', label: 'Team Members', icon: Users },
-            { id: 'activity', label: 'Activity History', icon: Activity },
-            { id: 'settings', label: 'Settings', icon: Settings },
+            { id: 'overview', label: 'Overview', icon: FolderGit2, href: null },
+            { id: 'test-cases', label: 'Test Cases', icon: CheckSquare, href: `/projects/${projectId}/test-cases` },
+            { id: 'suites', label: 'Test Suites', icon: FolderTree, href: `/projects/${projectId}/test-suites` },
+            { id: 'milestones', label: 'Milestones', icon: Milestone, href: `/projects/${projectId}/milestones` },
+            { id: 'environments', label: `Environments (${project.environments?.length || 0})`, icon: Server, href: null },
+            { id: 'members', label: 'Team Members', icon: Users, href: null },
+            { id: 'activity', label: 'Activity History', icon: Activity, href: null },
+            { id: 'settings', label: 'Settings', icon: Settings, href: null },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
+            if (tab.href) {
+              return (
+                <Link
+                  key={tab.id}
+                  href={tab.href}
+                  className="pb-3 pt-2 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-blue-600 flex items-center gap-2 transition-colors whitespace-nowrap"
+                >
+                  <Icon className="h-4 w-4" />
+                  {tab.label}
+                </Link>
+              );
+            }
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`pb-3 pt-2 text-sm font-medium border-b-2 flex items-center gap-2 transition-colors ${
+                className={`pb-3 pt-2 text-sm font-medium border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
                   isActive
                     ? 'border-blue-600 text-blue-600 dark:text-blue-400'
                     : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
@@ -305,6 +324,57 @@ export default function ProjectDetailPage() {
                     <p className="text-sm text-blue-950 dark:text-blue-200">{project.objectives}</p>
                   </div>
                 )}
+              </div>
+
+              {/* QA Hub Quick Actions */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Link
+                  href={`/projects/${projectId}/test-cases`}
+                  className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:border-blue-500 hover:shadow-md transition-all group"
+                >
+                  <div className="p-2.5 rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 w-fit mb-3 group-hover:scale-105 transition-transform">
+                    <CheckSquare className="h-5 w-5" />
+                  </div>
+                  <h4 className="font-bold text-slate-900 dark:text-white text-sm flex items-center justify-between">
+                    Test Cases
+                    <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Repository, step editor, versioning & CSV tools
+                  </p>
+                </Link>
+
+                <Link
+                  href={`/projects/${projectId}/test-suites`}
+                  className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:border-purple-500 hover:shadow-md transition-all group"
+                >
+                  <div className="p-2.5 rounded-lg bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 w-fit mb-3 group-hover:scale-105 transition-transform">
+                    <FolderTree className="h-5 w-5" />
+                  </div>
+                  <h4 className="font-bold text-slate-900 dark:text-white text-sm flex items-center justify-between">
+                    Test Suites
+                    <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-purple-600 transition-colors" />
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Hierarchical folder structure & organization
+                  </p>
+                </Link>
+
+                <Link
+                  href={`/projects/${projectId}/milestones`}
+                  className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:border-emerald-500 hover:shadow-md transition-all group"
+                >
+                  <div className="p-2.5 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 w-fit mb-3 group-hover:scale-105 transition-transform">
+                    <Milestone className="h-5 w-5" />
+                  </div>
+                  <h4 className="font-bold text-slate-900 dark:text-white text-sm flex items-center justify-between">
+                    Milestones
+                    <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-emerald-600 transition-colors" />
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Sprint tracking, release dates & QA progress
+                  </p>
+                </Link>
               </div>
 
               {/* Environments Quick View */}

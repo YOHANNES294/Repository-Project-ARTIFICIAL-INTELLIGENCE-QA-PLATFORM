@@ -48,12 +48,19 @@ Status Legend:
 ---
 
 ## Milestone 04 — Milestone and Test Management
-- [ ] Milestone domain models & status workflows (Planned, Active, Completed, Delayed, Cancelled)
-- [ ] Hierarchical Test Suites (folders/subfolders with circular reference prevention)
-- [ ] Test Cases, Test Steps, Preconditions, Expected Results, Tags, Priorities, Categories
-- [ ] Immutable test case versioning (`TestCaseVersion`)
-- [ ] Search, filtering, import/export (JSON/CSV)
-- [ ] Frontend test repository UI & milestone tracking
+- [x] Milestone domain models & status workflows (PLANNED, IN_PROGRESS, COMPLETED, BLOCKED, CANCELLED)
+- [x] Dynamic milestone progress calculation based on real associated test runs, executions, and defects (no hardcoded metrics)
+- [x] Date range validation for milestones (dueDate >= startDate)
+- [x] Hierarchical Test Suites (nested folders/subfolders with circular reference and self-parenting prevention)
+- [x] Test Cases with sequential keys (`PROJECT-101`), priorities, types, statuses, preconditions, objectives, estimated time, and author tracking
+- [x] Ordered Test Steps with actions, test data, expected results, and dynamic reordering
+- [x] Immutable test case versioning (`TestCaseVersion`) generated on meaningful content changes with version comparison diff engine
+- [x] Project-scoped Tags with usage counts and multi-tag filtering
+- [x] CSV Import engine with pre-validation and interactive preview table before transaction commit
+- [x] CSV Export engine with RFC 4180 compliance and Spreadsheet Formula Injection Sanitization (`=`, `+`, `-`, `@`, `\t`, `\r` escaped with single quote)
+- [x] Data integrity safeguard: prevents deleting test cases with executed run history
+- [x] Frontend Next.js 16 UI: Milestones list & details, Hierarchical Test Suites explorer, Test Case repository, Step editor, Version comparison viewer, CSV Import/Export modals
+- [x] Automated unit and integration test suite (100% passing across 50 tests)
 
 ---
 

@@ -6,6 +6,19 @@ import {
   EnvironmentDto,
   ProjectStatus,
   ProjectRole,
+  MilestoneDto,
+  MilestoneProgressDto,
+  MilestoneStatus,
+  TestSuiteDto,
+  TagDto,
+  TestCaseDto,
+  TestCaseVersionDto,
+  VersionDiffDto,
+  CsvImportPreviewResponse,
+  CsvBulkImportInput,
+  TestPriority,
+  TestType,
+  TestCaseStatus,
 } from '@ai-qa/shared-types';
 
 export interface ProjectListParams {
@@ -218,6 +231,271 @@ export class ApiClient {
     return this.request<{ message: string }>(`/projects/${projectId}/environments/${envId}`, {
       method: 'DELETE',
     });
+  }
+
+  // ----------------------------------------------------
+  // MILESTONES (Milestone 04)
+  // ----------------------------------------------------
+  async getMilestones(
+    projectId: string,
+    params: {
+      search?: string;
+      status?: MilestoneStatus;
+      priority?: TestPriority;
+      page?: number;
+      limit?: number;
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
+    } = {}
+  ): Promise<{ milestones: MilestoneDto[]; meta: any }> {
+    const query = new URLSearchParams();
+    if (params.search) query.set('search', params.search);
+    if (params.status) query.set('status', params.status);
+    if (params.priority) query.set('priority', params.priority);
+    if (params.page) query.set('page', String(params.page));
+    if (params.limit) query.set('limit', String(params.limit));
+    if (params.sortBy) query.set('sortBy', params.sortBy);
+    if (params.sortOrder) query.set('sortOrder', params.sortOrder);
+
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    const res = await fetch(`${this.baseUrl}/projects/${projectId}/milestones${queryString}`, {
+      credentials: 'include',
+    });
+    const json = (await res.json()) as ApiResponse<MilestoneDto[]>;
+    if (!res.ok || !json.success) {
+      throw new Error(json.error?.message || 'Failed to fetch milestones');
+    }
+    return {
+      milestones: json.data || [],
+      meta: json.meta,
+    };
+  }
+
+  async getMilestone(projectId: string, milestoneId: string): Promise<MilestoneDto> {
+    return this.request<MilestoneDto>(`/projects/${projectId}/milestones/${milestoneId}`);
+  }
+
+  async createMilestone(projectId: string, payload: any): Promise<MilestoneDto> {
+    return this.request<MilestoneDto>(`/projects/${projectId}/milestones`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateMilestone(projectId: string, milestoneId: string, payload: any): Promise<MilestoneDto> {
+    return this.request<MilestoneDto>(`/projects/${projectId}/milestones/${milestoneId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteMilestone(projectId: string, milestoneId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/projects/${projectId}/milestones/${milestoneId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getMilestoneProgress(projectId: string, milestoneId: string): Promise<MilestoneProgressDto> {
+    return this.request<MilestoneProgressDto>(`/projects/${projectId}/milestones/${milestoneId}/progress`);
+  }
+
+  // ----------------------------------------------------
+  // TEST SUITES (Milestone 04)
+  // ----------------------------------------------------
+  async getTestSuites(projectId: string): Promise<TestSuiteDto[]> {
+    return this.request<TestSuiteDto[]>(`/projects/${projectId}/suites`);
+  }
+
+  async getTestSuite(projectId: string, suiteId: string): Promise<TestSuiteDto> {
+    return this.request<TestSuiteDto>(`/projects/${projectId}/suites/${suiteId}`);
+  }
+
+  async createTestSuite(projectId: string, payload: any): Promise<TestSuiteDto> {
+    return this.request<TestSuiteDto>(`/projects/${projectId}/suites`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateTestSuite(projectId: string, suiteId: string, payload: any): Promise<TestSuiteDto> {
+    return this.request<TestSuiteDto>(`/projects/${projectId}/suites/${suiteId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteTestSuite(projectId: string, suiteId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/projects/${projectId}/suites/${suiteId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ----------------------------------------------------
+  // TAGS (Milestone 04)
+  // ----------------------------------------------------
+  async getTags(projectId: string): Promise<TagDto[]> {
+    return this.request<TagDto[]>(`/projects/${projectId}/tags`);
+  }
+
+  async createTag(projectId: string, payload: { name: string; color?: string }): Promise<TagDto> {
+    return this.request<TagDto>(`/projects/${projectId}/tags`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateTag(projectId: string, tagId: string, payload: { name?: string; color?: string }): Promise<TagDto> {
+    return this.request<TagDto>(`/projects/${projectId}/tags/${tagId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteTag(projectId: string, tagId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/projects/${projectId}/tags/${tagId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ----------------------------------------------------
+  // TEST CASES (Milestone 04)
+  // ----------------------------------------------------
+  async getTestCases(
+    projectId: string,
+    params: {
+      search?: string;
+      suiteId?: string;
+      milestoneId?: string;
+      priority?: TestPriority;
+      type?: TestType;
+      status?: TestCaseStatus;
+      tag?: string;
+      isArchived?: boolean;
+      page?: number;
+      limit?: number;
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
+    } = {}
+  ): Promise<{ testCases: TestCaseDto[]; meta: any }> {
+    const query = new URLSearchParams();
+    if (params.search) query.set('search', params.search);
+    if (params.suiteId) query.set('suiteId', params.suiteId);
+    if (params.milestoneId) query.set('milestoneId', params.milestoneId);
+    if (params.priority) query.set('priority', params.priority);
+    if (params.type) query.set('type', params.type);
+    if (params.status) query.set('status', params.status);
+    if (params.tag) query.set('tag', params.tag);
+    if (params.isArchived !== undefined) query.set('isArchived', String(params.isArchived));
+    if (params.page) query.set('page', String(params.page));
+    if (params.limit) query.set('limit', String(params.limit));
+    if (params.sortBy) query.set('sortBy', params.sortBy);
+    if (params.sortOrder) query.set('sortOrder', params.sortOrder);
+
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    const res = await fetch(`${this.baseUrl}/projects/${projectId}/test-cases${queryString}`, {
+      credentials: 'include',
+    });
+    const json = (await res.json()) as ApiResponse<TestCaseDto[]>;
+    if (!res.ok || !json.success) {
+      throw new Error(json.error?.message || 'Failed to fetch test cases');
+    }
+    return {
+      testCases: json.data || [],
+      meta: json.meta,
+    };
+  }
+
+  async getTestCase(projectId: string, caseId: string): Promise<TestCaseDto> {
+    return this.request<TestCaseDto>(`/projects/${projectId}/test-cases/${caseId}`);
+  }
+
+  async createTestCase(projectId: string, payload: any): Promise<TestCaseDto> {
+    return this.request<TestCaseDto>(`/projects/${projectId}/test-cases`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateTestCase(projectId: string, caseId: string, payload: any): Promise<TestCaseDto> {
+    return this.request<TestCaseDto>(`/projects/${projectId}/test-cases/${caseId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async archiveTestCase(projectId: string, caseId: string): Promise<TestCaseDto> {
+    return this.request<TestCaseDto>(`/projects/${projectId}/test-cases/${caseId}/archive`, {
+      method: 'POST',
+    });
+  }
+
+  async restoreTestCase(projectId: string, caseId: string): Promise<TestCaseDto> {
+    return this.request<TestCaseDto>(`/projects/${projectId}/test-cases/${caseId}/restore`, {
+      method: 'POST',
+    });
+  }
+
+  async deleteTestCase(projectId: string, caseId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/projects/${projectId}/test-cases/${caseId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getTestCaseVersions(projectId: string, caseId: string): Promise<TestCaseVersionDto[]> {
+    return this.request<TestCaseVersionDto[]>(`/projects/${projectId}/test-cases/${caseId}/versions`);
+  }
+
+  async getTestCaseVersion(
+    projectId: string,
+    caseId: string,
+    versionNumber: number
+  ): Promise<TestCaseVersionDto> {
+    return this.request<TestCaseVersionDto>(
+      `/projects/${projectId}/test-cases/${caseId}/versions/${versionNumber}`
+    );
+  }
+
+  async compareTestCaseVersions(
+    projectId: string,
+    caseId: string,
+    v1: number,
+    v2: number
+  ): Promise<VersionDiffDto> {
+    return this.request<VersionDiffDto>(
+      `/projects/${projectId}/test-cases/${caseId}/versions/compare?v1=${v1}&v2=${v2}`
+    );
+  }
+
+  // ----------------------------------------------------
+  // CSV IMPORT & EXPORT (Milestone 04)
+  // ----------------------------------------------------
+  async previewCsvImport(projectId: string, csvContent: string): Promise<CsvImportPreviewResponse> {
+    return this.request<CsvImportPreviewResponse>(`/projects/${projectId}/test-cases/csv/preview`, {
+      method: 'POST',
+      body: JSON.stringify({ csvContent }),
+    });
+  }
+
+  async bulkImportCsv(
+    projectId: string,
+    payload: CsvBulkImportInput
+  ): Promise<{ importedCount: number; testCases: TestCaseDto[] }> {
+    return this.request<{ importedCount: number; testCases: TestCaseDto[] }>(
+      `/projects/${projectId}/test-cases/csv/import`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }
+    );
+  }
+
+  getExportTestCasesCsvUrl(projectId: string, params: Record<string, string | undefined> = {}): string {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, val]) => {
+      if (val !== undefined && val !== '') query.set(key, val);
+    });
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    return `${this.baseUrl}/projects/${projectId}/test-cases/csv/export${queryString}`;
   }
 }
 

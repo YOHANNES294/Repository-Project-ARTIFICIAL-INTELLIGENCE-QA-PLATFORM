@@ -35,10 +35,16 @@ enum ProjectRole {
 
 enum MilestoneStatus {
   PLANNED
-  ACTIVE
+  IN_PROGRESS
   COMPLETED
-  DELAYED
+  BLOCKED
   CANCELLED
+}
+
+enum TestCaseStatus {
+  DRAFT
+  ACTIVE
+  DEPRECATED
 }
 
 enum TestType {
@@ -137,6 +143,9 @@ model User {
   defectHistories      DefectHistory[]
   assignedTestRuns     TestRun[]            @relation("TestRunAssignee")
   executedResults      TestResult[]         @relation("ResultExecutor")
+  ownedMilestones      Milestone[]          @relation("MilestoneOwner")
+  authoredTestCases    TestCase[]           @relation("TestCaseAuthor")
+  createdCaseVersions  TestCaseVersion[]    @relation("VersionCreator")
   notifications        Notification[]
   notificationPref     NotificationPreference?
   auditLogs            AuditLog[]
@@ -323,6 +332,7 @@ model Project {
   milestones     Milestone[]
   testSuites     TestSuite[]
   testCases      TestCase[]
+  tags           Tag[]
   testPlans      TestPlan[]
   testRuns       TestRun[]
   defects        Defect[]
@@ -380,20 +390,26 @@ model Milestone {
   projectId   String
   name        String
   description String?
+  objectives  String?
   status      MilestoneStatus @default(PLANNED)
+  priority    TestPriority    @default(MEDIUM)
   releaseVer  String?
   startDate   DateTime?
   dueDate     DateTime?
   completedAt DateTime?
+  ownerId     String?
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
   project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  owner       User?           @relation("MilestoneOwner", fields: [ownerId], references: [id], onDelete: SetNull)
   testPlans   TestPlan[]
   testRuns    TestRun[]
+  testCases   TestCase[]
   defects     Defect[]
 
   @@index([projectId])
+  @@index([ownerId])
 }
 
 model TestSuite {
@@ -402,6 +418,7 @@ model TestSuite {
   parentId    String?
   name        String
   description String?
+  objectives  String?
   orderIndex  Int         @default(0)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
@@ -415,31 +432,53 @@ model TestSuite {
   @@index([parentId])
 }
 
-model TestCase {
-  id             String            @id @default(uuid())
-  projectId      String
-  suiteId        String?
-  caseNumber     Int               // Sequential number within project, e.g. 101 -> CORE-101
-  title          String
-  description    String?
-  preconditions  String?
-  priority       TestPriority      @default(MEDIUM)
-  type           TestType          @default(FUNCTIONAL)
-  isArchived     Boolean           @default(false)
-  currentVersion Int               @default(1)
-  tags           String[]          @default([])
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+model Tag {
+  id        String     @id @default(uuid())
+  projectId String
+  name      String
+  color     String     @default("#3B82F6")
+  createdAt DateTime   @default(now())
 
-  project        Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  suite          TestSuite?        @relation(fields: [suiteId], references: [id], onDelete: SetNull)
-  versions       TestCaseVersion[]
-  planCases      TestPlanCase[]
-  defectLinks    DefectTestLink[]
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  testCases TestCase[]
+
+  @@unique([projectId, name])
+  @@index([projectId])
+}
+
+model TestCase {
+  id               String            @id @default(uuid())
+  projectId        String
+  suiteId          String?
+  milestoneId      String?
+  caseNumber       Int               // Sequential number within project, e.g. 101 -> CORE-101
+  title            String
+  description      String?
+  preconditions    String?
+  objectives       String?
+  priority         TestPriority      @default(MEDIUM)
+  type             TestType          @default(FUNCTIONAL)
+  status           TestCaseStatus    @default(ACTIVE)
+  estimatedTimeMin Int?
+  isArchived       Boolean           @default(false)
+  currentVersion   Int               @default(1)
+  authorId         String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  project          Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  suite            TestSuite?        @relation(fields: [suiteId], references: [id], onDelete: SetNull)
+  milestone        Milestone?        @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  author           User?             @relation("TestCaseAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  tags             Tag[]
+  versions         TestCaseVersion[]
+  planCases        TestPlanCase[]
+  defectLinks      DefectTestLink[]
 
   @@unique([projectId, caseNumber])
   @@index([projectId])
   @@index([suiteId])
+  @@index([milestoneId])
 }
 
 model TestCaseVersion {
@@ -449,11 +488,16 @@ model TestCaseVersion {
   title         String
   description   String?
   preconditions String?
+  objectives    String?
   priority      TestPriority
   type          TestType
+  status        TestCaseStatus    @default(ACTIVE)
+  changeSummary String?
+  createdById   String?
   createdAt     DateTime          @default(now())
 
   testCase      TestCase          @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  createdBy     User?             @relation("VersionCreator", fields: [createdById], references: [id], onDelete: SetNull)
   steps         TestStep[]
   runCases      TestRunCase[]
 
@@ -466,6 +510,7 @@ model TestStep {
   testCaseVersionId String
   stepNumber        Int
   action            String
+  testData          String?
   expectedResult    String
 
   version           TestCaseVersion @relation(fields: [testCaseVersionId], references: [id], onDelete: Cascade)
