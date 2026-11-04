@@ -31,12 +31,16 @@ $ChecksumFile = "$BackupFile.sha256"
 
 Write-Host "=========================================================="
 Write-Host " [BACKUP] Artificial Intelligence QA Platform Database"
-Write-Host " Target Host: $DbHost:$DbPort | Database: $DbName"
+Write-Host " Target Host: ${DbHost}:${DbPort} | Database: $DbName"
 Write-Host " Output File: $BackupFile"
 Write-Host "=========================================================="
 
 # Check for pg_dump availability
 $pgDump = Get-Command "pg_dump" -ErrorAction SilentlyContinue
+if (-not $pgDump -and (Test-Path "C:\Program Files\PostgreSQL\16\bin\pg_dump.exe")) {
+    $env:PATH = "C:\Program Files\PostgreSQL\16\bin;$env:PATH"
+    $pgDump = Get-Command "pg_dump" -ErrorAction SilentlyContinue
+}
 
 if ($pgDump) {
     Write-Host "[BACKUP] Executing native pg_dump..."

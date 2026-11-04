@@ -1,49 +1,49 @@
 {
-  "totalRequests": 2623,
-  "successfulRequests": 2077,
-  "failedRequests": 546,
+  "totalRequests": 3581,
+  "successfulRequests": 3581,
+  "failedRequests": 0,
   "concurrency": 20,
-  "durationSeconds": 10.05,
-  "throughputRps": 261,
+  "durationSeconds": 10.06,
+  "throughputRps": 356,
   "latencyMs": {
     "min": 1,
-    "max": 992,
-    "avg": 43,
-    "p50": 25,
-    "p90": 107,
-    "p95": 130,
-    "p99": 252
+    "max": 189,
+    "avg": 21,
+    "p50": 24,
+    "p90": 29,
+    "p95": 31,
+    "p99": 35
   },
   "endpoints": {
     "/health/live": {
-      "calls": 521,
-      "avgMs": 21,
-      "p95Ms": 32
+      "calls": 736,
+      "avgMs": 19,
+      "p95Ms": 28
     },
     "/health/ready": {
-      "calls": 546,
-      "avgMs": 125,
-      "p95Ms": 251
+      "calls": 676,
+      "avgMs": 22,
+      "p95Ms": 31
     },
     "/metrics": {
-      "calls": 520,
-      "avgMs": 22,
+      "calls": 697,
+      "avgMs": 23,
       "p95Ms": 32
     },
     "/metrics/json": {
-      "calls": 488,
-      "avgMs": 21,
-      "p95Ms": 32
+      "calls": 765,
+      "avgMs": 23,
+      "p95Ms": 31
     },
     "/billing/plans": {
-      "calls": 548,
-      "avgMs": 22,
-      "p95Ms": 32
+      "calls": 707,
+      "avgMs": 20,
+      "p95Ms": 29
     }
   },
   "memory": {
-    "beforeMb": 131,
-    "afterMb": 260,
-    "deltaMb": 129
+    "beforeMb": 132,
+    "afterMb": 286,
+    "deltaMb": 154
   }
 }

@@ -42,10 +42,14 @@ if (Test-Path $ChecksumFile) {
 Write-Host "=========================================================="
 Write-Host " [RESTORE] Restoring Database"
 Write-Host " Source File: $BackupFile"
-Write-Host " Target DB:   $TargetDb on $DbHost:$DbPort"
+Write-Host " Target DB:   $TargetDb on ${DbHost}:${DbPort}"
 Write-Host "=========================================================="
 
 $pgRestore = Get-Command "pg_restore" -ErrorAction SilentlyContinue
+if (-not $pgRestore -and (Test-Path "C:\Program Files\PostgreSQL\16\bin\pg_restore.exe")) {
+    $env:PATH = "C:\Program Files\PostgreSQL\16\bin;$env:PATH"
+    $pgRestore = Get-Command "pg_restore" -ErrorAction SilentlyContinue
+}
 
 if ($pgRestore) {
     Write-Host "[RESTORE] Executing pg_restore..."
