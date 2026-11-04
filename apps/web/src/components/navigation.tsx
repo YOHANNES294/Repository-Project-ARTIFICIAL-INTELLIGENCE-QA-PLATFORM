@@ -66,7 +66,13 @@ export function Navigation() {
           </div>
           <div className="flex items-center space-x-3">
             <NotificationBell />
-            <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+            <Link
+              href="/login"
+              className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-colors"
+            >
+              Sign In
+            </Link>
+            <span className="hidden sm:inline-block px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
               Active Organization: Default
             </span>
           </div>

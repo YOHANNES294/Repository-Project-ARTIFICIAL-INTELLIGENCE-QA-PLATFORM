@@ -160,10 +160,24 @@ export default function ProjectsPage() {
         ) : isError ? (
           <div className="p-8 text-center bg-red-50 dark:bg-red-950/20 rounded-xl border border-red-200 dark:border-red-900">
             <AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-2" />
-            <h3 className="text-base font-semibold text-red-900 dark:text-red-200">Failed to load projects</h3>
-            <p className="text-sm text-red-600 dark:text-red-400 mt-1">
+            <h3 className="text-base font-semibold text-red-900 dark:text-red-200">
+              {((error as Error)?.message || '').toLowerCase().includes('auth')
+                ? 'Authentication Required'
+                : 'Failed to load projects'}
+            </h3>
+            <p className="text-sm text-red-600 dark:text-red-400 mt-1 max-w-md mx-auto">
               {(error as Error)?.message || 'Database error occurred'}
             </p>
+            {((error as Error)?.message || '').toLowerCase().includes('auth') && (
+              <div className="mt-4">
+                <Link
+                  href="/login"
+                  className="inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors"
+                >
+                  Sign In to Access Projects
+                </Link>
+              </div>
+            )}
           </div>
         ) : projects.length === 0 ? (
           <div className="p-12 text-center bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
