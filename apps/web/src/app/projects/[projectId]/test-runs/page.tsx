@@ -47,6 +47,8 @@ export default function TestRunsPage() {
       }),
   });
 
+  const testRuns: TestRunDto[] = Array.isArray(data) ? data : ((data as any)?.testRuns || []);
+
   // Delete Mutation
   const deleteMutation = useMutation({
     mutationFn: (runId: string) => defaultApiClient.deleteTestRun(projectId, runId),
@@ -137,7 +139,7 @@ export default function TestRunsPage() {
               <div key={n} className="h-32 bg-slate-900/40 rounded-2xl animate-pulse border border-slate-800/60" />
             ))}
           </div>
-        ) : data?.testRuns.length === 0 ? (
+        ) : testRuns.length === 0 ? (
           <div className="text-center py-20 bg-slate-900/30 rounded-3xl border border-dashed border-slate-800">
             <PlayCircle className="w-12 h-12 text-slate-600 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-slate-300">No test runs found</h3>
@@ -154,7 +156,7 @@ export default function TestRunsPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {data?.testRuns.map((run) => {
+            {testRuns.map((run) => {
               const summary = run.summary || {
                 total: 0,
                 passed: 0,

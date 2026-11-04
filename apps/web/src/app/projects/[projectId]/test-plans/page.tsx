@@ -50,6 +50,8 @@ export default function TestPlansPage() {
       }),
   });
 
+  const testPlans: TestPlanDto[] = Array.isArray(data) ? data : ((data as any)?.testPlans || []);
+
   // Duplicate Mutation
   const duplicateMutation = useMutation({
     mutationFn: (variables: { planId: string; name: string }) =>
@@ -170,7 +172,7 @@ export default function TestPlansPage() {
               <div key={n} className="h-56 bg-slate-900/40 rounded-2xl animate-pulse border border-slate-800/60" />
             ))}
           </div>
-        ) : data?.testPlans.length === 0 ? (
+        ) : testPlans.length === 0 ? (
           <div className="text-center py-20 bg-slate-900/30 rounded-3xl border border-dashed border-slate-800">
             <ClipboardList className="w-12 h-12 text-slate-600 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-slate-300">No test plans found</h3>
@@ -187,7 +189,7 @@ export default function TestPlansPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {data?.testPlans.map((plan) => (
+            {testPlans.map((plan) => (
               <div
                 key={plan.id}
                 className="bg-slate-900/50 rounded-2xl border border-slate-800/80 hover:border-slate-700/80 transition-all p-5 flex flex-col justify-between group hover:shadow-xl hover:shadow-indigo-950/10"

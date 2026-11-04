@@ -164,7 +164,7 @@ export default function DefectsListPage() {
     }
   };
 
-  const defectsList = data?.defects || [];
+  const defectsList: DefectDto[] = Array.isArray(data) ? data : ((data as any)?.defects || []);
   const totalCount = data?.meta?.total || defectsList.length;
   const totalPages = Math.ceil(totalCount / limit) || 1;
 

@@ -660,9 +660,13 @@ export class ApiClient {
     if (params.limit) query.set('limit', String(params.limit));
 
     const queryString = query.toString() ? `?${query.toString()}` : '';
-    return this.request<{ testPlans: TestPlanDto[]; meta: any }>(
+    const res = await this.requestWithMeta<TestPlanDto[]>(
       `/projects/${projectId}/test-plans${queryString}`
     );
+    return {
+      testPlans: Array.isArray(res.data) ? res.data : ((res.data as any)?.testPlans || []),
+      meta: res.meta,
+    };
   }
 
   async getTestPlan(projectId: string, planId: string): Promise<TestPlanDto> {
@@ -708,9 +712,13 @@ export class ApiClient {
     projectId: string,
     planId: string
   ): Promise<{ planCases: TestPlanCaseDto[]; totalCount: number }> {
-    return this.request<{ planCases: TestPlanCaseDto[]; totalCount: number }>(
+    const res = await this.requestWithMeta<TestPlanCaseDto[]>(
       `/projects/${projectId}/test-plans/${planId}/cases`
     );
+    return {
+      planCases: Array.isArray(res.data) ? res.data : ((res.data as any)?.planCases || []),
+      totalCount: res.meta?.totalCount ?? (Array.isArray(res.data) ? res.data.length : 0),
+    };
   }
 
   async selectPlanCases(
@@ -767,9 +775,13 @@ export class ApiClient {
     if (params.limit) query.set('limit', String(params.limit));
 
     const queryString = query.toString() ? `?${query.toString()}` : '';
-    return this.request<{ testRuns: TestRunDto[]; meta: any }>(
+    const res = await this.requestWithMeta<TestRunDto[]>(
       `/projects/${projectId}/test-runs${queryString}`
     );
+    return {
+      testRuns: Array.isArray(res.data) ? res.data : ((res.data as any)?.testRuns || []),
+      meta: res.meta,
+    };
   }
 
   async getTestRun(projectId: string, runId: string): Promise<TestRunDto> {
@@ -826,9 +838,13 @@ export class ApiClient {
     if (params.search) query.set('search', params.search);
 
     const queryString = query.toString() ? `?${query.toString()}` : '';
-    return this.request<{ runCases: TestRunCaseDto[]; summary: any }>(
+    const res = await this.requestWithMeta<TestRunCaseDto[]>(
       `/projects/${projectId}/test-runs/${runId}/cases${queryString}`
     );
+    return {
+      runCases: Array.isArray(res.data) ? res.data : ((res.data as any)?.runCases || []),
+      summary: res.meta?.summary,
+    };
   }
 
   async assignRunCases(
@@ -989,9 +1005,13 @@ export class ApiClient {
     if (params.limit) query.set('limit', params.limit.toString());
 
     const queryString = query.toString() ? `?${query.toString()}` : '';
-    return this.request<{ defects: DefectDto[]; meta: any }>(
+    const res = await this.requestWithMeta<DefectDto[]>(
       `/projects/${projectId}/defects${queryString}`
     );
+    return {
+      defects: Array.isArray(res.data) ? res.data : ((res.data as any)?.defects || []),
+      meta: res.meta,
+    };
   }
 
   async createDefect(projectId: string, payload: CreateDefectInput): Promise<DefectDto> {
