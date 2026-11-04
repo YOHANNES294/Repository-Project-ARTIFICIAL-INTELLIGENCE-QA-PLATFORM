@@ -199,11 +199,13 @@ export class TestRunService {
 
     const summary = this.calculateSummary(run.cases);
     const { cases, ...rest } = run;
+    const runCasesResult = await this.getRunCases(projectId, runId);
 
     return {
       ...rest,
       key: `${project.key}-TR-${run.runNumber}`,
       summary,
+      cases: runCasesResult.runCases,
     };
   }
 
